@@ -1,11 +1,11 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
 use anyhow::Result;
-use poise::serenity_prelude::colours::css::{POSITIVE, WARNING};
 use poise::serenity_prelude::{
-    ButtonStyle, CreateButton, CreateComponent, CreateContainer, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, Http, Member,
+    ButtonStyle, CacheHttp as _, CreateButton, CreateComponent, CreateContainer, CreateSection,
+    CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, EditMember, Http, Member,
     Mentionable as _, Permissions, Role, RoleId, UserId,
+    colours::css::{POSITIVE, WARNING},
 };
 
 use crate::db::DbHandle;
@@ -207,8 +207,21 @@ impl RoleDeltaResolved {
     }
 
     pub async fn apply(&self, http: &Http, member: &Member) -> Result<()> {
-        member.add_roles(http, &self.add, None).await?;
-        member.remove_roles(http, &self.remove, None).await?;
+        let mut user_roles: HashSet<RoleId> = member.roles.iter().copied().collect();
+
+        user_roles.extend(&self.add);
+        for role in &self.remove {
+            user_roles.remove(role);
+        }
+
+        member
+            .guild_id
+            .edit_member(
+                http.http(),
+                member.user.id,
+                EditMember::new().roles(user_roles.into_iter().collect::<Vec<_>>()),
+            )
+            .await?;
         Ok(())
     }
 }
