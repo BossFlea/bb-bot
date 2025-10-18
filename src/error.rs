@@ -58,7 +58,7 @@ fn user_error_container(error: &Error) -> CreateComponent<'static> {
 pub async fn event_handler_error(mut error: Error, ctx: &SerenityContext, event: &FullEvent) {
     let container = if error.is::<UserError>() {
         deduplicate_error_chain(&mut error);
-        error!("User error while handling event: {error:#}");
+        warn!("User error while handling event: {error:#}");
         user_error_container(&error)
     } else {
         deduplicate_error_chain(&mut error);
@@ -120,7 +120,7 @@ where
             let invocation_string = ctx.invocation_string();
             let container = if error.is::<UserError>() {
                 deduplicate_error_chain(&mut error);
-                error!("A user error occurred while executing {invocation_string:?}: {error:#}");
+                warn!("A user error occurred while executing {invocation_string:?}: {error:#}");
                 user_error_container(&error)
             } else {
                 deduplicate_error_chain(&mut error);
