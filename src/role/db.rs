@@ -198,6 +198,7 @@ impl DbHandle {
             .await?
     }
 
+    #[allow(dead_code)]
     pub async fn get_role(&self, kind: RoleMappingKind) -> Result<Option<RoleId>> {
         self.dispatch_request(|response_tx| RoleDb::GetRole { response_tx, kind })
             .await?

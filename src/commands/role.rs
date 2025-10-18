@@ -22,12 +22,11 @@ use crate::error::UserError;
 use crate::role::{
     menu::{RoleConfigSession, RoleConfigState},
     request,
-    types::{NetworkBingo, RoleMappingKind, RoleMappingKindRaw},
+    types::RoleMappingKindRaw,
 };
 use crate::shared::{
     Context,
     menu::{navigation::GenerateMenu as _, timeout},
-    types::{Bingo, BingoKind},
 };
 
 #[poise::command(
@@ -51,8 +50,6 @@ async fn send(
     channel: Option<GenericChannelId>,
     #[description = "ID of existing message to edit (must belong to bot)"] edit: Option<Message>,
 ) -> Result<()> {
-    let db = &ctx.data().db_handle;
-
     let begin_button = CreateButton::new("role:request:begin")
         .label("Request Roles")
         .style(ButtonStyle::Primary);
@@ -67,42 +64,18 @@ async fn send(
         "Click the button to update your bingo-related roles.
 -# Note: If you've never done this before, you will be prompted to link your Hypixel profile.
 ### Bingo Rank role
-e.g. {} – Mirrors your in-game bingo rank
+Mirrors your in-game bingo rank
 ### Bingo Blackout counter
-e.g. {} – Counter of how many bingo cards you've completed
+Counter of how many bingo cards you've completed
 ### Special Blackout roles
-e.g. {} – Blackout roles for extreme/secret bingo events
+Blackout roles for extreme/secret bingo events
 ### Network Bingo completion roles
-e.g. {} – Roles for completing hypixel's seasonal network bingo events
+Roles for completing hypixel's seasonal network bingo events
 ### 'Immortal' role
-{} – Awarded for completing a bingo card without dying a single time
+Awarded for completing a bingo card without dying a single time
 -# Note: This will only work if your bingo profile still has no deaths and hasn't been deleted yet!
 
 **» All other roles are granted manually in {} !**",
-        db.get_role(RoleMappingKind::BingoRank { rank: 4 })
-            .await?
-            .unwrap_or_default()
-            .mention(),
-        db.get_role(RoleMappingKind::Completions { count: 12 })
-            .await?
-            .unwrap_or_default()
-            .mention(),
-        db.get_role(RoleMappingKind::SpecificCompletion {
-            bingo: Bingo::new(2, BingoKind::Extreme, None)
-        })
-        .await?
-        .unwrap_or_default()
-        .mention(),
-        db.get_role(RoleMappingKind::NetworkBingo {
-            bingo: NetworkBingo::Anniversary2023
-        })
-        .await?
-        .unwrap_or_default()
-        .mention(),
-        db.get_role(RoleMappingKind::Immortal)
-            .await?
-            .unwrap_or_default()
-            .mention(),
         MANUAL_ROLE_CHANNEL.mention()
     )));
 
