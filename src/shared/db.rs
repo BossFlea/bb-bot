@@ -86,11 +86,12 @@ impl DbHandle {
             .await?
     }
 
-    pub async fn raw_query(&self, sql: String) -> Result<SqlResponse> {
-        self.dispatch_request(|response_tx| SharedDb::RawQuery { response_tx, sql })
+    pub async fn raw_query_readonly(&self, sql: String) -> Result<SqlResponse> {
+        self.dispatch_request(|response_tx| SharedDb::RawQueryReadOnly { response_tx, sql })
             .await?
     }
 
+    #[allow(dead_code)]
     pub async fn raw_batch(&self, sql: String) -> Result<()> {
         self.dispatch_request(|response_tx| SharedDb::RawBatch { response_tx, sql })
             .await?
@@ -123,7 +124,7 @@ pub enum SharedDb {
     GetIsNetworkBingo {
         response_tx: oneshot::Sender<Result<Option<bool>>>,
     },
-    RawQuery {
+    RawQueryReadOnly {
         response_tx: oneshot::Sender<Result<SqlResponse>>,
         sql: String,
     },
@@ -181,8 +182,8 @@ impl DbRequest for SharedDb {
                     .context("Failed to fetch network bingo status from database");
                 let _ = response_tx.send(result);
             }
-            SharedDb::RawQuery { response_tx, sql } => {
-                let result = db::write::raw_query(conn, sql);
+            SharedDb::RawQueryReadOnly { response_tx, sql } => {
+                let result = db::read::raw_query_readonly(conn, sql);
                 let _ = response_tx.send(result);
             }
             SharedDb::RawBatch { response_tx, sql } => {

@@ -46,22 +46,13 @@ async fn error(
     }
 }
 
-#[poise::command(
-    slash_command,
-    subcommand_required,
-    subcommands("sql_direct", "sql_script")
-)]
-async fn sql(_ctx: Context<'_>) -> Result<()> {
-    unreachable!("This shouldn't be possible to invoke.");
-}
-
-/// Execute raw SQL on the bot's database. OPERATES ON THE LIVE DB!
-#[poise::command(slash_command, rename = "direct")]
-async fn sql_direct(
+/// Execute read-only SQL on the bot's database. ('SELECT' statements)
+#[poise::command(slash_command)]
+async fn sql(
     ctx: Context<'_>,
-    #[description = "Single SQL statement to execute"] sql: String,
+    #[description = "SELECT statement to run"] sql: String,
 ) -> Result<()> {
-    let sql_data = ctx.data().db_handle.raw_query(sql).await?;
+    let sql_data = ctx.data().db_handle.raw_query_readonly(sql).await?;
 
     let response = format!("## SQL Response\n{}", sql_data.to_formatted());
 
@@ -82,6 +73,7 @@ async fn sql_direct(
     Ok(())
 }
 
+// NOTE: currently not included anywhere, disabled
 /// Run an SQL script on the bot's database. OPERATES ON THE LIVE DB!
 #[poise::command(slash_command, rename = "script")]
 async fn sql_script(
@@ -139,6 +131,7 @@ The `{script}` SQL script executed without errors."
     Ok(())
 }
 
+#[allow(dead_code)]
 async fn autocomplete_script<'a>(
     _ctx: Context<'_>,
     partial: &'a str,
@@ -166,6 +159,7 @@ async fn autocomplete_script<'a>(
     CreateAutocompleteResponse::new().set_choices(choices)
 }
 
+#[allow(dead_code)]
 fn get_filenames(path: &Path, files: &mut Vec<String>) -> std::io::Result<()> {
     if path.is_dir() {
         for entry in fs::read_dir(path)? {

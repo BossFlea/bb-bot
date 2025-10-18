@@ -1,10 +1,7 @@
-use anyhow::{Context, Result, anyhow};
-use rusqlite::{Connection, Error, params, types::Value};
+use anyhow::Result;
+use rusqlite::{Connection, Error, params};
 
-use crate::{
-    error::UserError,
-    shared::types::{Bingo, BingoKind, SqlResponse},
-};
+use crate::shared::types::{Bingo, BingoKind};
 
 pub fn add_new_bingo(
     conn: &mut Connection,
@@ -68,48 +65,6 @@ pub fn set_is_network_bingo(conn: &mut Connection, is_active: bool) -> Result<()
         params![is_active],
     )
     .map(|_| ())
-}
-
-pub fn raw_query(conn: &mut Connection, sql: String) -> Result<SqlResponse> {
-    let mut statement = conn
-        .prepare(&sql)
-        .context(UserError(anyhow!("Invalid SQL")))?;
-
-    let upper_sql = sql.trim_start().to_uppercase();
-    let returns_rows = upper_sql.starts_with("SELECT") || upper_sql.starts_with("VALUES");
-
-    let column_names: Vec<_> = statement
-        .column_names()
-        .into_iter()
-        .map(String::from)
-        .collect();
-
-    if returns_rows {
-        let mut rows = statement
-            .query_map([], |row| {
-                let mut values = Vec::with_capacity(column_names.len());
-                for column in &column_names {
-                    values.push(match row.get::<_, Value>(column.as_str())? {
-                        Value::Null => "NULL".to_string(),
-                        Value::Integer(i) => i.to_string(),
-                        Value::Real(f) => f.to_string(),
-                        Value::Text(t) => t,
-                        Value::Blob(b) => format!("<blob {} bytes>", b.len()),
-                    });
-                }
-
-                Ok(values.join(" | "))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-
-        rows = [column_names.join(" | "), String::new()]
-            .into_iter()
-            .chain(rows)
-            .collect();
-        Ok(SqlResponse::ReturnedRows(rows))
-    } else {
-        Ok(SqlResponse::AffectedRows(statement.execute([])?))
-    }
 }
 
 pub fn raw_batch(conn: &mut Connection, sql: String) -> Result<()> {

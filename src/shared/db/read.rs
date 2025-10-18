@@ -1,6 +1,10 @@
-use rusqlite::{Connection, Error, OptionalExtension as _, params};
+use anyhow::{Context as _, Result, anyhow, bail};
+use rusqlite::{Connection, Error, OptionalExtension as _, params, types::Value};
 
-use crate::shared::types::{Bingo, BingoKind};
+use crate::{
+    error::UserError,
+    shared::types::{Bingo, BingoKind, SqlResponse},
+};
 
 pub fn complete_bingo_data(conn: &mut Connection, bingo_ids: &[u8]) -> Result<Vec<Bingo>, Error> {
     let transaction = conn.transaction()?;
@@ -70,4 +74,52 @@ pub fn get_is_network_bingo(conn: &Connection) -> Result<Option<bool>, Error> {
     )
     .optional()
     .map(|opt| opt.flatten())
+}
+
+pub fn raw_query_readonly(conn: &mut Connection, sql: String) -> Result<SqlResponse> {
+    let mut statement = conn
+        .prepare(&sql)
+        .context(UserError(anyhow!("Invalid SQL")))?;
+
+    if !statement.readonly() {
+        bail!(UserError(anyhow!(
+            "The provided SQL statement isn't read-only"
+        )))
+    }
+
+    let upper_sql = sql.trim_start().to_uppercase();
+    let returns_rows = upper_sql.starts_with("SELECT") || upper_sql.starts_with("VALUES");
+
+    let column_names: Vec<_> = statement
+        .column_names()
+        .into_iter()
+        .map(String::from)
+        .collect();
+
+    if returns_rows {
+        let mut rows = statement
+            .query_map([], |row| {
+                let mut values = Vec::with_capacity(column_names.len());
+                for column in &column_names {
+                    values.push(match row.get::<_, Value>(column.as_str())? {
+                        Value::Null => "NULL".to_string(),
+                        Value::Integer(i) => i.to_string(),
+                        Value::Real(f) => f.to_string(),
+                        Value::Text(t) => t,
+                        Value::Blob(b) => format!("<blob {} bytes>", b.len()),
+                    });
+                }
+
+                Ok(values.join(" | "))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        rows = [column_names.join(" | "), String::new()]
+            .into_iter()
+            .chain(rows)
+            .collect();
+        Ok(SqlResponse::ReturnedRows(rows))
+    } else {
+        Ok(SqlResponse::AffectedRows(statement.execute([])?))
+    }
 }
