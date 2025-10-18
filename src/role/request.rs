@@ -24,7 +24,7 @@ pub async fn link_user(ctx: &SerenityContext, user: &User, mc_name: &str) -> Res
 
     let uuid = api.uuid(mc_name).await?;
 
-    let discord = api.linked_discord(&uuid).await?;
+    let discord = api.linked_discord(db, &uuid).await?;
 
     match discord {
         None => Ok(LinkStatus::NoDiscord),
@@ -310,7 +310,7 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
             .collect(),
         // cache miss
         None => {
-            let completions = api.network_bingo_completions(uuid).await?;
+            let completions = api.network_bingo_completions(db, uuid).await?;
             if completions.contains(&NetworkBingo::from_u8(current_network_bingo))
                 || !network_bingo_active
             {

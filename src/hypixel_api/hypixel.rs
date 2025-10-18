@@ -1,3 +1,5 @@
+use std::str::FromStr as _;
+
 use anyhow::{Context as _, Result, bail};
 use chrono::{DateTime, Datelike as _, Utc};
 use serde_json::Value;
@@ -14,7 +16,7 @@ pub async fn query_api(
     handle: &ApiHandle,
     endpoint: &str,
     params: &[(&str, &str)],
-) -> Result<Value> {
+) -> Result<(Value, String)> {
     let params: String = params
         .iter()
         .map(|p| format!("&{}={}", p.0, p.1))
@@ -42,11 +44,11 @@ pub async fn query_api(
         bail!("Unsuccessful Hypixel API request");
     };
 
-    Ok(json)
+    Ok((json, text))
 }
 
 pub async fn get_current_bingo_data(handle: &ApiHandle, db: &DbHandle) -> Result<(Bingo, bool)> {
-    let json = query_api(handle, "/v2/resources/skyblock/bingo", &[]).await?;
+    let (json, _) = query_api(handle, "/v2/resources/skyblock/bingo", &[]).await?;
 
     let bingo_id = json["id"]
         .as_u64()
@@ -77,9 +79,28 @@ pub async fn get_current_bingo_data(handle: &ApiHandle, db: &DbHandle) -> Result
     Ok((bingo, Utc::now().timestamp() as u32 > end))
 }
 
-pub async fn linked_discord(handle: &ApiHandle, uuid: &str) -> Result<Option<String>> {
+pub async fn linked_discord(
+    handle: &ApiHandle,
+    db: &DbHandle,
+    uuid: &str,
+) -> Result<Option<String>> {
     let params = [("uuid", uuid)];
-    let json = query_api(handle, "/v2/player", &params).await?;
+    // only fetch from API if no valid cached result exists
+    // NOTE: this is necessary because of an undocumented 60s rate limit on fetching the same
+    // player, which applies *only* to application keys, not dev keys
+    let json = match db.cache_lookup_player_endpoint(uuid.to_string()).await? {
+        Some((_, json_str)) => Value::from_str(&json_str)?,
+        None => {
+            let (json, raw_json) = query_api(handle, "/v2/player", &params).await?;
+            db.cache_insert_player_endpoint(
+                uuid.to_string(),
+                chrono::Utc::now().timestamp(),
+                raw_json,
+            )
+            .await?;
+            json
+        }
+    };
 
     let discord = json["player"]["socialMedia"]["links"]["DISCORD"]
         .as_str()
@@ -91,7 +112,7 @@ pub async fn linked_discord(handle: &ApiHandle, uuid: &str) -> Result<Option<Str
 pub async fn bingo_completions(handle: &ApiHandle, uuid: &str) -> Result<Vec<u8>> {
     let params = [("uuid", uuid)];
     // NOTE: This errors if the user has never touched bingo
-    let json = match query_api(handle, "/v2/skyblock/bingo", &params).await {
+    let (json, _) = match query_api(handle, "/v2/skyblock/bingo", &params).await {
         Ok(response) => response,
         Err(err) => {
             warn!("No Bingo data for '{uuid}': {err}");
@@ -128,7 +149,7 @@ pub async fn bingo_profile_data(
     uuid: &str,
 ) -> Result<Option<BingoProfileData>> {
     let params = [("uuid", uuid)];
-    let profiles_json = query_api(handle, "/v2/skyblock/profiles", &params).await?;
+    let (profiles_json, _) = query_api(handle, "/v2/skyblock/profiles", &params).await?;
 
     let profile_id = profiles_json["profiles"].as_array().and_then(|profiles| {
         profiles.iter().find_map(|p| {
@@ -144,7 +165,7 @@ pub async fn bingo_profile_data(
     };
 
     let params = [("profile", profile_id)];
-    let json = query_api(handle, "/v2/skyblock/profile", &params).await?;
+    let (json, _) = query_api(handle, "/v2/skyblock/profile", &params).await?;
 
     let has_deaths: bool = json["profile"]["members"][uuid]["bestiary"]["deaths"]
         .as_object()
@@ -202,10 +223,24 @@ pub fn bingo_id_from_timestamp(timestamp: u32) -> Result<u8> {
 
 pub async fn network_bingo_completions(
     handle: &ApiHandle,
+    db: &DbHandle,
     uuid: &str,
 ) -> Result<Vec<NetworkBingo>> {
     let params = [("uuid", uuid)];
-    let json = query_api(handle, "/v2/player", &params).await?;
+    // only fetch from API if no valid cached result exists
+    let json = match db.cache_lookup_player_endpoint(uuid.to_string()).await? {
+        Some((_, json_str)) => Value::from_str(&json_str)?,
+        None => {
+            let (json, raw_json) = query_api(handle, "/v2/player", &params).await?;
+            db.cache_insert_player_endpoint(
+                uuid.to_string(),
+                chrono::Utc::now().timestamp(),
+                raw_json,
+            )
+            .await?;
+            json
+        }
+    };
 
     let seasonal_events = network_bingo::network_bingo_completions(&json["player"]["seasonal"]);
 

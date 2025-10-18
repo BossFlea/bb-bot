@@ -165,3 +165,43 @@ pub fn cached_immortal(
         Ok(None)
     }
 }
+
+pub fn cached_player_endpoint(
+    conn: &Connection,
+    uuid: &str,
+) -> Result<Option<(i64, String)>, Error> {
+    let cached = conn
+        .query_one(
+            "
+            SELECT timestamp, json
+            FROM role_player_endpoint_cache
+            WHERE uuid=?1
+            ",
+            params![uuid],
+            |row| {
+                Ok((
+                    row.get("timestamp")?,
+                    row.get::<_, Option<_>>("json")?.unwrap_or_default(),
+                ))
+            },
+        )
+        .optional()?;
+
+    if let Some((timestamp, json)) = cached {
+        if chrono::Utc::now().timestamp() > timestamp + 60 {
+            // invalid, delete cache entry
+            conn.execute(
+                "
+                DETELE FROM role_player_endpoint_cache
+                WHERE uuid=?1
+                ",
+                params![uuid],
+            )?;
+            Ok(None)
+        } else {
+            Ok(Some((timestamp, json)))
+        }
+    } else {
+        Ok(None)
+    }
+}

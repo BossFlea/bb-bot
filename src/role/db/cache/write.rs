@@ -65,3 +65,19 @@ pub fn cache_immortal(
     )
     .map(|_| ())
 }
+
+pub fn cache_player_endpoint(
+    conn: &Connection,
+    uuid: &str,
+    timestamp: i64,
+    json: &str,
+) -> Result<(), Error> {
+    conn.execute(
+        "
+        INSERT OR REPLACE INTO role_player_endpoint_cache (uuid, timestamp, json)
+        VALUES (?1, ?2, ?3)
+        ",
+        params![uuid, timestamp, json],
+    )
+    .map(|_| ())
+}

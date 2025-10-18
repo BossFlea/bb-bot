@@ -32,8 +32,8 @@ impl ApiHandle {
         mojang::username(&self.client, uuid).await
     }
 
-    pub async fn linked_discord(&self, uuid: &str) -> Result<Option<String>> {
-        hypixel::linked_discord(self, uuid)
+    pub async fn linked_discord(&self, db: &DbHandle, uuid: &str) -> Result<Option<String>> {
+        hypixel::linked_discord(self, db, uuid)
             .await
             .context(Self::INVALID_RESPONSE)
     }
@@ -56,8 +56,12 @@ impl ApiHandle {
             .context(Self::INVALID_RESPONSE)
     }
 
-    pub async fn network_bingo_completions(&self, uuid: &str) -> Result<Vec<NetworkBingo>> {
-        hypixel::network_bingo_completions(self, uuid)
+    pub async fn network_bingo_completions(
+        &self,
+        db: &DbHandle,
+        uuid: &str,
+    ) -> Result<Vec<NetworkBingo>> {
+        hypixel::network_bingo_completions(self, db, uuid)
             .await
             .context(Self::INVALID_RESPONSE)
     }

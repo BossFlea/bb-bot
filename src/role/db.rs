@@ -107,6 +107,15 @@ pub fn initialise_tables(conn: &mut Connection) -> Result<(), rusqlite::Error> {
             updated_after_bingo INTEGER NOT NULL,
             bingo_set BLOB
         );
+
+        -- Cached responses from hypixel's `/v2/player` endpoint
+        CREATE TABLE IF NOT EXISTS role_player_endpoint_cache (
+            uuid TEXT PRIMARY KEY,
+            timestamp INTEGER NOT NULL,
+            json TEXT
+        );
+        -- Clear on startup
+        DELETE FROM role_player_endpoint_cache;
         ",
     )
 }
@@ -379,6 +388,32 @@ impl DbHandle {
         })
         .await?
     }
+
+    pub async fn cache_lookup_player_endpoint(
+        &self,
+        mc_uuid: String,
+    ) -> Result<Option<(i64, String)>> {
+        self.dispatch_request(|response_tx| RoleDb::CacheLookupPlayerEndpoint {
+            response_tx,
+            mc_uuid,
+        })
+        .await?
+    }
+
+    pub async fn cache_insert_player_endpoint(
+        &self,
+        mc_uuid: String,
+        timestamp: i64,
+        json: String,
+    ) -> Result<()> {
+        self.dispatch_request(|response_tx| RoleDb::CacheInsertPlayerEndpoint {
+            response_tx,
+            mc_uuid,
+            timestamp,
+            json,
+        })
+        .await?
+    }
 }
 
 pub enum RoleDb {
@@ -498,6 +533,16 @@ pub enum RoleDb {
     DeleteRoleMappingByRole {
         response_tx: oneshot::Sender<Result<()>>,
         role: RoleId,
+    },
+    CacheLookupPlayerEndpoint {
+        response_tx: oneshot::Sender<Result<Option<(i64, String)>>>,
+        mc_uuid: String,
+    },
+    CacheInsertPlayerEndpoint {
+        response_tx: oneshot::Sender<Result<()>>,
+        mc_uuid: String,
+        timestamp: i64,
+        json: String,
     },
 }
 
@@ -721,6 +766,25 @@ impl DbRequest for RoleDb {
             RoleDb::DeleteRoleMappingByRole { response_tx, role } => {
                 let result = db::role_config::write::delete_role_mapping_by_role(conn, &role)
                     .context("Failed to delete role mapping from database");
+                let _ = response_tx.send(result);
+            }
+            RoleDb::CacheLookupPlayerEndpoint {
+                response_tx,
+                mc_uuid,
+            } => {
+                let result = db::cache::read::cached_player_endpoint(conn, &mc_uuid)
+                    .context("Failed to look up cached API responses");
+                let _ = response_tx.send(result);
+            }
+            RoleDb::CacheInsertPlayerEndpoint {
+                response_tx,
+                mc_uuid,
+                timestamp,
+                json,
+            } => {
+                let result =
+                    db::cache::write::cache_player_endpoint(conn, &mc_uuid, timestamp, &json)
+                        .context("Failed to cache API responses");
                 let _ = response_tx.send(result);
             }
         }
