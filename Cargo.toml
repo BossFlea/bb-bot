@@ -23,6 +23,7 @@ plotters = "0.3.7"
 # fork for components v2 support
 poise = { git = "https://github.com/BossFlea/poise.git", branch = "serenity-next" }
 rand = "0.9.2"
+regex = "1.12.2"
 reqwest = "0.12.23"
 resvg = "0.45.1"
 rusqlite = { version = "0.37.0", features = ["bundled"] }

@@ -8,8 +8,7 @@ use poise::serenity_prelude::{
     CreateTextDisplay, CreateUnfurledMediaItem, GenericChannelId, GetMessages, Mentionable as _,
     Message, MessageFlags, MessageId, Timestamp, UserId,
 };
-use tokio::fs::File;
-use tokio::io::AsyncReadExt;
+use regex::Regex;
 
 use crate::config::{SPLASH_ROLE, SPLASHES_CHANNEL, TY_CHANNEL};
 use crate::shared::{Context, types::BingoKind};
@@ -101,6 +100,8 @@ async fn fetch_splashes(
     let start_timestamp = timestamp_start_of_day_est(1);
     let end_timestamp = timestamp_start_of_day_est(bingo_days as u32 + 1);
 
+    let hub_regex = Regex::new(r"(?i)(?:dungeon|d|dung)?[\s*_~`|]*hub[^\d\n]*\d+").unwrap();
+
     'outer: loop {
         let mut builder = GetMessages::new().limit(100);
 
@@ -122,7 +123,9 @@ async fn fetch_splashes(
             if message.timestamp < start_timestamp {
                 break 'outer;
             }
-            if message.content.contains(&SPLASH_ROLE.mention().to_string()) {
+            if message.content.contains(&SPLASH_ROLE.mention().to_string())
+                && hub_regex.is_match(&message.content)
+            {
                 messages.push(message);
             }
         }
@@ -131,53 +134,6 @@ async fn fetch_splashes(
     let splashes: Vec<_> = messages
         .into_iter()
         .map(|m| (m.timestamp, m.author.id))
-        .collect();
-
-    Ok(SplashList::new(splashes, bingo_days))
-}
-
-/// very hacky, very temporary debug function to load splash data from a file
-/// (drop-in replacement for the proper fetch_splashes)
-#[allow(dead_code)]
-async fn fetch_splashes_debug(
-    _ctx: &Context<'_>,
-    _channel: GenericChannelId,
-    _bingo_days: usize,
-) -> Result<SplashList> {
-    let est = chrono::FixedOffset::west_opt(5 * 3600).unwrap();
-    // manual
-    let month = chrono::NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
-    let bingo_days: usize = 7;
-
-    let est_datetime = est
-        .from_local_datetime(&month.and_hms_opt(0, 0, 0).unwrap())
-        .unwrap();
-
-    let start_timestamp = est_datetime.timestamp();
-
-    let mut file = File::open("splashes.txt").await?;
-    let mut splashes_raw = String::new();
-    file.read_to_string(&mut splashes_raw).await?;
-    let splashes = splashes_raw
-        .split("\n")
-        .filter_map(|s| {
-            if s.is_empty() {
-                return None;
-            }
-            let mut data = s.split(";");
-            let _message_id = data.next().unwrap();
-            let timestamp = data.next().unwrap().parse().unwrap();
-            if timestamp < start_timestamp
-                || timestamp > start_timestamp + 3600 * 24 * bingo_days as i64
-            {
-                return None;
-            }
-            let author_id = data.next().unwrap().parse().unwrap();
-            Some((
-                Timestamp::from_unix_timestamp(timestamp).unwrap(),
-                UserId::new(author_id),
-            ))
-        })
         .collect();
 
     Ok(SplashList::new(splashes, bingo_days))
