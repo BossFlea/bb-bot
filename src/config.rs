@@ -14,6 +14,8 @@ pub const MANUAL_ROLE_CHANNEL: GenericChannelId = GenericChannelId::new(14277792
 pub const SPLASHES_CHANNEL: GenericChannelId = GenericChannelId::new(1427777326321500210);
 // mentioned in splash list message
 pub const TY_CHANNEL: GenericChannelId = GenericChannelId::new(1427777425906860133);
+// additional channel where hob list is logged when using `/hob send`
+pub const HOB_LOG_CHANNEL: GenericChannelId = GenericChannelId::new(1429152322189136024);
 // used to detect splash messages in splash list functionality
 pub const SPLASH_ROLE: RoleId = RoleId::new(1427780532586151996);
 // part of error messages

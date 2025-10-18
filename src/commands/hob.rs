@@ -4,14 +4,17 @@ use anyhow::Result;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay, GenericChannelId,
-        Mentionable as _, MessageFlags, colours::css::POSITIVE,
+        CreateAttachment, CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay,
+        GenericChannelId, Mentionable as _, MessageFlags, colours::css::POSITIVE,
     },
 };
 use tokio::sync::{Mutex, Notify};
 
-use crate::config::MENU_TIMEOUT_SECS;
-use crate::hob::menu::{HobEditSession, HobEditState, SelectEntryState, format};
+use crate::config::{HOB_LOG_CHANNEL, MENU_TIMEOUT_SECS};
+use crate::hob::{
+    menu::{HobEditSession, HobEditState, SelectEntryState, format},
+    types::HobEntry,
+};
 use crate::shared::{
     Context,
     menu::{navigation::GenerateMenu as _, timeout},
@@ -65,15 +68,19 @@ async fn manage(ctx: Context<'_>) -> Result<()> {
 /// Send the HoB list
 #[poise::command(
     slash_command,
-    required_bot_permissions = "VIEW_CHANNEL | SEND_MESSAGES"
+    required_bot_permissions = "VIEW_CHANNEL | SEND_MESSAGES | ATTACH_FILES"
 )]
 async fn send(
     ctx: Context<'_>,
     #[description = "Where to send the HoB list"]
     #[channel_types("Text")]
     channel: Option<GenericChannelId>,
+    #[description = "Whether to suppress backup script generation"] suppress_backup_script: Option<
+        bool,
+    >,
 ) -> Result<()> {
     let channel = channel.unwrap_or(ctx.channel_id());
+    let suppress_backup_script = suppress_backup_script.unwrap_or(false);
 
     let hob_entries = ctx.data().db_handle.get_all_hob_entries().await?;
 
@@ -90,6 +97,12 @@ async fn send(
 
     for message in messages {
         channel.send_message(ctx.http(), message).await?;
+    }
+
+    if !suppress_backup_script {
+        HOB_LOG_CHANNEL
+            .send_message(ctx.http(), log_message(&hob_entries)?)
+            .await?;
     }
 
     let container = CreateComponent::Container(
@@ -112,4 +125,22 @@ The full HoB was sent to {} in the form of {message_count} messages.",
     .await?;
 
     Ok(())
+}
+
+fn log_message(hob_entries: &[HobEntry]) -> Result<CreateMessage<'static>> {
+    let log_text = format!(
+        "## HoB Backup Script
+This script resets the tables responsible for storing HoB data to their current state \
+when executed on the bot database in the future."
+    );
+
+    let backup_file = CreateAttachment::bytes(
+        format::build_hob_backup_script(&hob_entries).into_bytes(),
+        format!(
+            "reset_hob_entries_{}.sql",
+            chrono::Utc::now().format("%b%Y")
+        ),
+    );
+
+    Ok(CreateMessage::new().content(log_text).add_file(backup_file))
 }
