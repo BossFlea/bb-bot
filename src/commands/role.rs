@@ -33,7 +33,7 @@ use crate::shared::{
 #[poise::command(
     slash_command,
     subcommand_required,
-    subcommands("send", "force", "config", "inspect", "network_bingo")
+    subcommands("send", "force", "config", "query", "network_bingo")
 )]
 pub async fn rolerequest(_ctx: Context<'_>) -> Result<()> {
     unreachable!("This shouldn't be possible to invoke");
@@ -355,18 +355,9 @@ Unlinked `{username}` from {}.",
     Ok(())
 }
 
-#[poise::command(
-    slash_command,
-    subcommand_required,
-    subcommands("inspect_link", "inspect_stats")
-)]
-async fn inspect(_ctx: Context<'_>) -> Result<()> {
-    unreachable!("This shouldn't be possible to invoke");
-}
-
-/// Check the link status of any Discord or Minecraft account
-#[poise::command(slash_command, rename = "link")]
-async fn inspect_link(
+/// Check the link status and stats of any Discord/Minecraft account
+#[poise::command(slash_command)]
+async fn query(
     ctx: Context<'_>,
     #[description = "By Discord account"] discord: Option<UserId>,
     #[description = "By Minecraft username/UUID"] minecraft: Option<String>,
@@ -376,43 +367,48 @@ async fn inspect_link(
 
     ctx.defer().await?;
 
-    let container = match (discord, minecraft) {
+    let (discord, uuid, username) = match (discord, minecraft) {
         (None, None) => {
             let text = CreateComponent::TextDisplay(CreateTextDisplay::new(
                 "## Insufficient arguments
 You need to provide either the `discord` or `minecraft` command argument.",
             ));
-            CreateComponent::Container(CreateContainer::new(vec![text]).accent_color(WARNING))
+            let container =
+                CreateComponent::Container(CreateContainer::new(vec![text]).accent_color(WARNING));
+            ctx.send(
+                CreateReply::new()
+                    .flags(MessageFlags::IS_COMPONENTS_V2)
+                    .components(vec![container]),
+            )
+            .await?;
+            return Ok(());
         }
         (Some(user_id), _) => {
-            let uuid = db.get_linked_user_by_discord(user_id).await?;
-            if let Some(uuid) = uuid {
-                let username = api.username(&uuid).await?;
-                let text = format!(
-                    "## Linked account found
-{}'s linked Minecraft account is `{username}`.
--# Stored in database as UUID.",
-                    user_id.mention()
-                );
-                CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                        CreateTextDisplay::new(text),
-                    )])
-                    .accent_color(POSITIVE),
-                )
-            } else {
-                let text = format!(
-                    "## Unlinked
+            let uuid = match db.get_linked_user_by_discord(user_id).await? {
+                Some(uuid) => uuid,
+                None => {
+                    let text = format!(
+                        "## Unlinked
 {} hasn't linked a Minecraft account to their Discord.",
-                    user_id.mention()
-                );
-                CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                        CreateTextDisplay::new(text),
-                    )])
-                    .accent_color(WARNING),
-                )
-            }
+                        user_id.mention()
+                    );
+                    let container = CreateComponent::Container(
+                        CreateContainer::new(vec![CreateComponent::TextDisplay(
+                            CreateTextDisplay::new(text),
+                        )])
+                        .accent_color(WARNING),
+                    );
+                    ctx.send(
+                        CreateReply::new()
+                            .flags(MessageFlags::IS_COMPONENTS_V2)
+                            .components(vec![container]),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+            };
+            let username = api.username(&uuid).await?;
+            (Some(user_id), uuid, username)
         }
         (_, Some(minecraft)) => {
             let (uuid, username) = if minecraft.len() >= 32 {
@@ -425,106 +421,43 @@ You need to provide either the `discord` or `minecraft` command argument.",
                 let uuid = api.uuid(&minecraft).await?;
                 (uuid, minecraft)
             };
-            let user_id = db.get_linked_user_by_uuid(uuid).await?;
-            if let Some(user_id) = user_id {
-                let text = format!(
-                    "## Linked account found
-`{username}`'s linked Discord account is {}.
--# Stored in database as UUID.",
-                    user_id.mention()
-                );
-                CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                        CreateTextDisplay::new(text),
-                    )])
-                    .accent_color(POSITIVE),
-                )
-            } else {
-                let text = format!(
-                    "## Unlinked
-`{username}` hasn't been linked to a Discord account."
-                );
-                CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                        CreateTextDisplay::new(text),
-                    )])
-                    .accent_color(WARNING),
-                )
-            }
+            let discord = db.get_linked_user_by_uuid(uuid.clone()).await?;
+            (discord, uuid, username)
         }
     };
-    ctx.send(
-        CreateReply::new()
-            .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
-    )
-    .await?;
-    Ok(())
-}
 
-/// Check the detected stats of a Minecraft account (use '/rolerequest force update' to update roles)
-#[poise::command(slash_command, rename = "stats")]
-async fn inspect_stats(
-    ctx: Context<'_>,
-    #[description = "By Discord (linked account)"] discord: Option<UserId>,
-    #[description = "By Minecraft username/UUID"] minecraft: Option<String>,
-) -> Result<()> {
-    let db = &ctx.data().db_handle;
-    let api = &ctx.data().api_handle;
-
-    ctx.defer().await?;
-
-    let container = match (discord, minecraft) {
-        (None, None) => {
-            let text = CreateComponent::TextDisplay(CreateTextDisplay::new(
-                "## Insufficient arguments
-You need to provide either the `discord` or `minecraft` command argument.",
-            ));
-            CreateComponent::Container(CreateContainer::new(vec![text]).accent_color(WARNING))
+    let link_message = match discord {
+        Some(user_id) => {
+            format!(
+                "## Linked
+{} is linked to `{username}`.
+-# Stored in database as UUID.",
+                user_id.mention()
+            )
         }
-        (Some(user_id), _) => {
-            let uuid = db.get_linked_user_by_discord(user_id).await?;
-            if let Some(uuid) = uuid {
-                let roles = request::player_roles(ctx.serenity_context(), &uuid).await?;
-                CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                        roles.to_text_display(),
-                    )])
-                    .accent_color(POSITIVE),
-                )
-            } else {
-                let text = format!(
-                    "## Unlinked
-{} hasn't linked a Minecraft account to their Discord.",
-                    user_id.mention()
-                );
-                CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
-                        CreateTextDisplay::new(text),
-                    )])
-                    .accent_color(WARNING),
-                )
-            }
-        }
-        (_, Some(minecraft)) => {
-            let uuid = if minecraft.len() >= 32 {
-                minecraft
-            } else {
-                api.uuid(&minecraft).await?
-            };
-            let roles = request::player_roles(ctx.serenity_context(), &uuid).await?;
-
-            CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(roles.to_text_display())])
-                    .accent_color(POSITIVE),
+        None => {
+            format!(
+                "## Unlinked
+`{username}` hasn't been linked to a Discord account."
             )
         }
     };
+    let link_text = CreateComponent::TextDisplay(CreateTextDisplay::new(link_message));
+
+    let roles_text = CreateComponent::TextDisplay(
+        request::player_roles(ctx.serenity_context(), &uuid)
+            .await?
+            .to_text_display(),
+    );
+
+    let container = CreateComponent::Container(
+        CreateContainer::new(vec![link_text, roles_text]).accent_color(POSITIVE),
+    );
 
     ctx.send(
         CreateReply::new()
             .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
+            .components(vec![container]),
     )
     .await?;
     Ok(())
