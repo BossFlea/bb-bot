@@ -17,17 +17,21 @@ use poise::{
 };
 use tokio::sync::{Mutex, Notify};
 
-use crate::config::{MANUAL_ROLE_CHANNEL, MENU_TIMEOUT_SECS};
-use crate::error::UserError;
 use crate::role::{
+    db::link::{GetLinkedUserByMinecraft, RemoveLinkedUserByDiscord, UpdateLinkedUser},
     menu::{RoleConfigSession, RoleConfigState},
     request,
-    types::RoleMappingKindRaw,
+    types::{LinkedUser, RoleMappingKindRaw},
 };
 use crate::shared::{
     Context,
     menu::{navigation::GenerateMenu as _, timeout},
 };
+use crate::{
+    config::{MANUAL_ROLE_CHANNEL, MENU_TIMEOUT_SECS},
+    shared::db::SetIsNetworkBingo,
+};
+use crate::{error::UserError, role::db::link::GetLinkedUserByDiscord};
 
 #[poise::command(
     slash_command,
@@ -192,7 +196,10 @@ async fn network_bingo(
     ctx: Context<'_>,
     #[description = "Whether a Network Bingo Event is currently ongoing"] active: bool,
 ) -> Result<()> {
-    ctx.data().db_handle.update_is_network_bingo(active).await?;
+    ctx.data()
+        .db_handle
+        .request(SetIsNetworkBingo { is_active: active })
+        .await??;
 
     let message = match active {
         true => "Role Requests will no longer serve cached Network Bingo Completions.",
@@ -230,16 +237,19 @@ async fn force_update(
     ctx: Context<'_>,
     #[description = "Whose roles to update"] user: Member,
 ) -> Result<()> {
-    let uuid = ctx
+    let linked_user = ctx
         .data()
         .db_handle
-        .get_linked_user_by_discord(user.user.id)
-        .await?
+        .request(GetLinkedUserByDiscord {
+            discord: user.user.id,
+        })
+        .await??
         .context(UserError(anyhow!("User hasn't linked their accounts")))?;
 
     ctx.defer().await?;
 
-    let role_status = request::update_roles(ctx.serenity_context(), &uuid, &user).await?;
+    let role_status =
+        request::update_roles(ctx.serenity_context(), &linked_user.mc_uuid, &user).await?;
 
     let container = role_status.to_diff_message(Some(&user.user.id));
 
@@ -266,8 +276,10 @@ async fn force_link(
 
     ctx.data()
         .db_handle
-        .update_linked_user(discord, uuid)
-        .await?;
+        .request(UpdateLinkedUser {
+            user: LinkedUser::new(discord, uuid),
+        })
+        .await??;
 
     let container = CreateComponent::Container(
         CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
@@ -298,14 +310,18 @@ async fn force_unlink(
 ) -> Result<()> {
     ctx.defer().await?;
 
-    let removed_uuid = ctx
+    let removed_user = ctx
         .data()
         .db_handle
-        .remove_linked_user_by_discord(user)
-        .await?
+        .request(RemoveLinkedUserByDiscord { discord: user })
+        .await??
         .context(UserError(anyhow!("User hasn't linked their accounts",)))?;
 
-    let username = ctx.data().api_handle.username(&removed_uuid).await?;
+    let username = ctx
+        .data()
+        .api_handle
+        .username(&removed_user.mc_uuid)
+        .await?;
 
     let container = CreateComponent::Container(
         CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
@@ -357,8 +373,11 @@ You need to provide either the `discord` or `minecraft` command argument.",
             return Ok(());
         }
         (Some(user_id), _) => {
-            let uuid = match db.get_linked_user_by_discord(user_id).await? {
-                Some(uuid) => uuid,
+            let uuid = match db
+                .request(GetLinkedUserByDiscord { discord: user_id })
+                .await??
+            {
+                Some(linked_user) => linked_user.mc_uuid,
                 None => {
                     let text = format!(
                         "## Unlinked
@@ -394,8 +413,12 @@ You need to provide either the `discord` or `minecraft` command argument.",
                 let uuid = api.uuid(&minecraft).await?;
                 (uuid, minecraft)
             };
-            let discord = db.get_linked_user_by_uuid(uuid.clone()).await?;
-            (discord, uuid, username)
+            let linked_user = db
+                .request(GetLinkedUserByMinecraft {
+                    mc_uuid: uuid.clone(),
+                })
+                .await??;
+            (linked_user.map(|u| u.discord), uuid, username)
         }
     };
 

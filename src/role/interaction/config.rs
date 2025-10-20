@@ -11,8 +11,10 @@ use poise::serenity_prelude::{
 };
 use tracing::{info, warn};
 
-use crate::error::UserError;
 use crate::role::{
+    db::role_config::{
+        DeleteRoleMappingByRole, GetRolePatterns, InsertRoleMapping, SetRolePatterns,
+    },
     interaction::modal,
     menu::RoleConfigSession,
     types::{NetworkBingo, RoleMapping, RoleMappingKind, RoleMappingKindRaw, RolePatterns},
@@ -23,6 +25,7 @@ use crate::shared::{
     menu::navigation::GenerateMenu as _,
     types::{Bingo, BingoKind},
 };
+use crate::{error::UserError, role::db::role_config::DetectRelevantRoles};
 
 pub async fn handle_interaction(
     ctx: &SerenityContext,
@@ -151,7 +154,9 @@ async fn component(
 
             let guild_roles: Vec<Role> = guild.roles(ctx.http()).await?.into_iter().collect();
 
-            let detected_roles = db.detect_relevant_roles(guild_roles).await?;
+            let detected_roles = db
+                .request(DetectRelevantRoles { roles: guild_roles })
+                .await??;
 
             let role_list = if detected_roles.is_empty() {
                 "*None*".to_string()
@@ -196,7 +201,7 @@ If such a gap is intentional, roles can still be configured manually."
             ))
         }
         "edit_patterns" => {
-            let patterns = db.get_role_patterns().await?;
+            let patterns = db.request(GetRolePatterns).await??;
 
             let modal = modal::RolePatterns::create_prefilled(
                 &id_prefix,
@@ -268,7 +273,8 @@ If such a gap is intentional, roles can still be configured manually."
                     .context("Invalid interaction: Expected role ID")?,
             );
 
-            db.delete_role_mapping_by_role(role_id).await?;
+            db.request(DeleteRoleMappingByRole { role: role_id })
+                .await??;
 
             Ok(MessageEdit::Interaction(
                 session.state.generate(db, session.menu_id).await?,
@@ -309,13 +315,15 @@ async fn modal(
         "role_patterns_submit" => {
             let values = modal::RolePatterns::validate(&interaction.data.components)?;
 
-            db.set_role_patterns(RolePatterns::new(
-                values.completions.to_string(),
-                values.specific_completion.to_string(),
-                values.bingo_rank.to_string(),
-                values.immortal.to_string(),
-            ))
-            .await?;
+            db.request(SetRolePatterns {
+                patterns: RolePatterns::new(
+                    values.completions.to_string(),
+                    values.specific_completion.to_string(),
+                    values.bingo_rank.to_string(),
+                    values.immortal.to_string(),
+                ),
+            })
+            .await??;
 
             let container =
                 CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
@@ -358,8 +366,10 @@ to run the detection process using the new patterns.",
                 .parse()
                 .context(UserError(anyhow!("Failed to parse rank: Invalid number")))?;
 
-            db.insert_role_mapping(role_id, RoleMappingKind::BingoRank { rank })
-                .await?;
+            db.request(InsertRoleMapping {
+                role_mapping: RoleMapping::new(RoleMappingKind::BingoRank { rank }, role_id),
+            })
+            .await??;
 
             let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
@@ -403,8 +413,10 @@ Associated {} with Bingo Rank {rank}.",
                 "Failed to parse Blackout count: Invalid number"
             )))?;
 
-            db.insert_role_mapping(role_id, RoleMappingKind::Completions { count })
-                .await?;
+            db.request(InsertRoleMapping {
+                role_mapping: RoleMapping::new(RoleMappingKind::Completions { count }, role_id),
+            })
+            .await??;
 
             let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
@@ -460,8 +472,13 @@ Associated {} with Blackout count {count}.",
 
             let bingo = Bingo::new(kind_specific_id, bingo_kind, None);
 
-            db.insert_role_mapping(role_id, RoleMappingKind::SpecificCompletion { bingo })
-                .await?;
+            db.request(InsertRoleMapping {
+                role_mapping: RoleMapping::new(
+                    RoleMappingKind::SpecificCompletion { bingo },
+                    role_id,
+                ),
+            })
+            .await??;
 
             let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
@@ -501,8 +518,10 @@ Associated {} with {bingo}.",
             )
             .await?;
 
-            db.insert_role_mapping(role_id, RoleMappingKind::Immortal)
-                .await?;
+            db.request(InsertRoleMapping {
+                role_mapping: RoleMapping::new(RoleMappingKind::Immortal, role_id),
+            })
+            .await??;
 
             let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
@@ -551,8 +570,10 @@ Associated {} with Immortal.",
                     .context("Expected valid Network Bingo ID")?,
             );
 
-            db.insert_role_mapping(role_id, RoleMappingKind::NetworkBingo { bingo })
-                .await?;
+            db.request(InsertRoleMapping {
+                role_mapping: RoleMapping::new(RoleMappingKind::NetworkBingo { bingo }, role_id),
+            })
+            .await??;
 
             let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
                 CreateTextDisplay::new(format!(

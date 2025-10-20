@@ -2,17 +2,18 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use poise::serenity_prelude::{
-    async_trait, Component, CreateComponent, CreateContainer, CreateTextDisplay, GenericChannelId,
-    Http, MessageId, User,
+    Component, CreateComponent, CreateContainer, CreateTextDisplay, GenericChannelId, Http,
+    MessageId, User, async_trait,
 };
 use tokio::sync::Notify;
 
 use crate::db::DbHandle;
+use crate::role::db::role_config::GetRoleMappingsByKind;
 use crate::role::types::RoleMappingKindRaw;
 use crate::shared::menu::navigation::GenerateMenu;
 use crate::shared::menu::{
-    timeout::{Expirable, IntoCreate as _},
     MenuMessage,
+    timeout::{Expirable, IntoCreate as _},
 };
 
 mod configure_roles;
@@ -78,7 +79,9 @@ impl RoleConfigState {
 #[async_trait]
 impl GenerateMenu for RoleConfigState {
     async fn generate(&mut self, db: &DbHandle, menu_id: u64) -> Result<MenuMessage<'static>> {
-        let role_mappings = db.get_role_mappings_by_kind(self.kind).await?;
+        let role_mappings = db
+            .request(GetRoleMappingsByKind { kind: self.kind })
+            .await??;
         Ok(configure_roles::generate(menu_id, &role_mappings, self))
     }
 }

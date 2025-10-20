@@ -5,10 +5,10 @@ use rusqlite::Connection;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::config::DB_PATH;
-use crate::db::DbRequest;
+use crate::db::ErasedDbRequest;
 
 pub fn start_db_thread(
-    mut rx: mpsc::Receiver<Box<dyn DbRequest>>,
+    mut rx: mpsc::Receiver<Box<dyn ErasedDbRequest>>,
 ) -> oneshot::Receiver<Result<()>> {
     let (ready_tx, ready_rx) = oneshot::channel();
 
@@ -24,7 +24,7 @@ pub fn start_db_thread(
         let _ = ready_tx.send(Ok(()));
 
         while let Some(request) = rx.blocking_recv() {
-            request.execute(&mut conn);
+            request.execute_boxed(&mut conn);
         }
     });
 

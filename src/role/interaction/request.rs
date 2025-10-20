@@ -10,9 +10,15 @@ use poise::serenity_prelude::{
 };
 use tracing::info;
 
-use crate::config::{BOT_MAINTAINER, MANUAL_ROLE_CHANNEL};
-use crate::role::interaction::modal;
+use crate::role::{
+    db::link::{RemoveLinkedUserByDiscord, RemoveLinkedUserByMinecraft},
+    interaction::modal,
+};
 use crate::shared::BotData;
+use crate::{
+    config::{BOT_MAINTAINER, MANUAL_ROLE_CHANNEL},
+    role::db::link::GetLinkedUserByDiscord,
+};
 
 pub async fn handle_interaction(
     ctx: &SerenityContext,
@@ -49,9 +55,13 @@ async fn component(
 
     match action.next().unwrap_or_default() {
         "begin" => {
-            let uuid = db.get_linked_user_by_discord(interaction.user.id).await?;
+            let linked_user = db
+                .request(GetLinkedUserByDiscord {
+                    discord: interaction.user.id,
+                })
+                .await??;
 
-            if let Some(uuid) = uuid {
+            if let Some(uuid) = linked_user.map(|u| u.mc_uuid) {
                 interaction.defer_ephemeral(ctx.http()).await?;
 
                 let guild_member = interaction
@@ -137,11 +147,16 @@ click this button and enter your in-game username when prompted.",
 
             match uuid {
                 Some(uuid) => {
-                    db.remove_linked_user_by_uuid(uuid.to_string()).await?;
+                    db.request(RemoveLinkedUserByMinecraft {
+                        mc_uuid: uuid.to_string(),
+                    })
+                    .await??;
                 }
                 None => {
-                    db.remove_linked_user_by_discord(interaction.user.id)
-                        .await?;
+                    db.request(RemoveLinkedUserByDiscord {
+                        discord: interaction.user.id,
+                    })
+                    .await??;
                 }
             }
 

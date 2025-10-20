@@ -1,22 +1,22 @@
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use poise::serenity_prelude::{
-    small_fixed_array::FixedString, ButtonStyle, CacheHttp as _, ComponentInteraction,
-    Context as SerenityContext, CreateButton, CreateComponent, CreateContainer,
-    CreateInteractionResponse, CreateInteractionResponseMessage, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, MessageFlags,
-    ModalInteraction, ReactionType,
+    ButtonStyle, CacheHttp as _, ComponentInteraction, Context as SerenityContext, CreateButton,
+    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseMessage,
+    CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, MessageFlags,
+    ModalInteraction, ReactionType, small_fixed_array::FixedString,
 };
 
 use crate::hob::{
-    interaction::{modal, MessageEdit},
+    db::InsertHobEntry,
+    interaction::{MessageEdit, modal},
     menu::{HobEditState, SelectEntryState, ViewEntryState},
     types::{HobEntry, OneOffPlayers},
 };
 use crate::shared::{
-    interaction::{modal as shared_modal, MenuChange},
+    BotData,
+    interaction::{MenuChange, modal as shared_modal},
     menu::navigation::GenerateMenu as _,
     types::Bingo,
-    BotData,
 };
 
 pub async fn handle_component(
@@ -211,14 +211,16 @@ pub async fn handle_modal(
                 .map(FixedString::into_string);
             let entry_id = crate::shared::menu::generate_id();
 
-            db.insert_hob_entry(HobEntry::OneOff {
-                id: entry_id,
-                title: values.title.into_string(),
-                comment,
-                bingo,
-                players: OneOffPlayers { players },
+            db.request(InsertHobEntry {
+                entry: HobEntry::OneOff {
+                    id: entry_id,
+                    title: values.title.into_string(),
+                    comment,
+                    bingo,
+                    players: OneOffPlayers { players },
+                },
             })
-            .await?;
+            .await??;
 
             interaction
                 .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)
@@ -240,13 +242,15 @@ pub async fn handle_modal(
                 .map(FixedString::into_string);
             let entry_id = crate::shared::menu::generate_id();
 
-            db.insert_hob_entry(HobEntry::Ongoing {
-                id: entry_id,
-                title: values.title.into_string(),
-                comment,
-                subentries: Vec::new(),
+            db.request(InsertHobEntry {
+                entry: HobEntry::Ongoing {
+                    id: entry_id,
+                    title: values.title.into_string(),
+                    comment,
+                    subentries: Vec::new(),
+                },
             })
-            .await?;
+            .await??;
 
             interaction
                 .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)

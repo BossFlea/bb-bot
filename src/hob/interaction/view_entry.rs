@@ -9,6 +9,7 @@ use poise::serenity_prelude::{
 };
 
 use crate::hob::{
+    db::{DeleteHobEntry, GetHobEntry, InsertHobSubentry, UpdateHobEntry},
     interaction::{MessageEdit, modal},
     menu::{HobEditState, SelectEntryState, ViewEntryState, ViewSubentryState},
     types::{HobEntry, OneOffPlayers, OngoingSubentry},
@@ -52,8 +53,10 @@ pub async fn handle_component(
         }
         "preview" => {
             let entry = db
-                .get_hob_entry_by_id(session_state.id)
-                .await?
+                .request(GetHobEntry {
+                    id: session_state.id,
+                })
+                .await??
                 .context("Invalid entry ID")?;
             let entry_text = entry.to_text_display().0;
             let title =
@@ -77,8 +80,10 @@ pub async fn handle_component(
         }
         "edit" => {
             let hob_entry = db
-                .get_hob_entry_by_id(session_state.id)
-                .await?
+                .request(GetHobEntry {
+                    id: session_state.id,
+                })
+                .await??
                 .context("Invalid entry ID")?;
 
             let modal = {
@@ -138,7 +143,10 @@ pub async fn handle_component(
             Ok(MenuChange::none())
         }
         "delete_confirm" => {
-            db.delete_hob_entry_by_id(session_state.id).await?;
+            db.request(DeleteHobEntry {
+                id: session_state.id,
+            })
+            .await??;
 
             let success_text = CreateComponent::TextDisplay(CreateTextDisplay::new(
                 "## Deleted Successfully\nThe entry was successfully removed from the database.",
@@ -222,14 +230,16 @@ pub async fn handle_modal(
                 .filter(|str| !str.trim().is_empty())
                 .map(FixedString::into_string);
 
-            db.update_hob_entry(HobEntry::OneOff {
-                id: session_state.id,
-                title: values.title.into_string(),
-                comment,
-                bingo,
-                players: OneOffPlayers { players },
+            db.request(UpdateHobEntry {
+                entry: HobEntry::OneOff {
+                    id: session_state.id,
+                    title: values.title.into_string(),
+                    comment,
+                    bingo,
+                    players: OneOffPlayers { players },
+                },
             })
-            .await?;
+            .await??;
 
             interaction
                 .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)
@@ -245,13 +255,15 @@ pub async fn handle_modal(
                 .filter(|str| !str.trim().is_empty())
                 .map(FixedString::into_string);
 
-            db.update_hob_entry(HobEntry::Ongoing {
-                id: session_state.id,
-                title: values.title.into_string(),
-                comment,
-                subentries: Vec::new(), // edited separately
+            db.request(UpdateHobEntry {
+                entry: HobEntry::Ongoing {
+                    id: session_state.id,
+                    title: values.title.into_string(),
+                    comment,
+                    subentries: Vec::new(), // edited separately
+                },
             })
-            .await?;
+            .await??;
 
             interaction
                 .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)
@@ -266,17 +278,17 @@ pub async fn handle_modal(
             let bingo = Bingo::from_input(&values.bingo)?;
             let subentry_id = crate::shared::menu::generate_id();
 
-            db.insert_ongoing_subentry(
-                OngoingSubentry {
+            db.request(InsertHobSubentry {
+                subentry: OngoingSubentry {
                     id: subentry_id,
                     entry_id: session_state.id,
                     player: values.player.into_string(),
                     value: values.value.into_string(),
                     bingo,
                 },
-                session_state.id,
-            )
-            .await?;
+                ongoing_entry_id: session_state.id,
+            })
+            .await??;
 
             interaction
                 .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)

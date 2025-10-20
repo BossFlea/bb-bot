@@ -8,6 +8,7 @@ use poise::serenity_prelude::{
 };
 
 use crate::hob::{
+    db::{DeleteHobSubentry, GetHobSubentry, UpdateHobSubentry},
     interaction::{MessageEdit, modal},
     menu::{HobEditState, ViewEntryState, ViewSubentryState},
     types::OngoingSubentry,
@@ -42,8 +43,11 @@ pub async fn handle_component(
         }
         "preview" => {
             let subentry = db
-                .get_ongoing_subentry_by_id(session_state.id, session_state.entry_id)
-                .await?
+                .request(GetHobSubentry {
+                    id: session_state.id,
+                    entry_id: session_state.entry_id,
+                })
+                .await??
                 .context("Invalid subentry ID")?;
             let subentry_text =
                 CreateComponent::TextDisplay(CreateTextDisplay::new(subentry.to_list_item()));
@@ -70,8 +74,11 @@ pub async fn handle_component(
         }
         "edit" => {
             let subentry = db
-                .get_ongoing_subentry_by_id(session_state.id, session_state.entry_id)
-                .await?
+                .request(GetHobSubentry {
+                    id: session_state.id,
+                    entry_id: session_state.entry_id,
+                })
+                .await??
                 .context("Invalid subentry ID")?;
 
             let modal = modal::HobOngoingSubentry::create_prefilled(
@@ -113,8 +120,11 @@ pub async fn handle_component(
             Ok(MenuChange::none())
         }
         "delete_confirm" => {
-            db.delete_ongoing_subentry_by_id(session_state.id, session_state.entry_id)
-                .await?;
+            db.request(DeleteHobSubentry {
+                id: session_state.id,
+                entry_id: session_state.entry_id,
+            })
+            .await??;
 
             let success_text = CreateComponent::TextDisplay(CreateTextDisplay::new(
                 "## Deleted Successfully\nThe subentry was successfully removed from the database.",
@@ -162,14 +172,16 @@ pub async fn handle_modal(
 
             let bingo = Bingo::from_input(&values.bingo)?;
 
-            db.update_ongoing_subentry(OngoingSubentry {
-                id: session_state.id,
-                entry_id: session_state.entry_id,
-                player: values.player.into_string(),
-                value: values.value.into_string(),
-                bingo,
+            db.request(UpdateHobSubentry {
+                subentry: OngoingSubentry {
+                    id: session_state.id,
+                    entry_id: session_state.entry_id,
+                    player: values.player.into_string(),
+                    value: values.value.into_string(),
+                    bingo,
+                },
             })
-            .await?;
+            .await??;
 
             interaction
                 .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)

@@ -12,9 +12,9 @@ use poise::{
 };
 use tracing::warn;
 
-use crate::config::DB_SCRIPTS_DIR;
-use crate::error::UserError;
 use crate::shared::Context;
+use crate::{config::DB_SCRIPTS_DIR, shared::db::RawQueryReadonly};
+use crate::{error::UserError, shared::db::RawBatch};
 
 #[poise::command(slash_command, subcommand_required, subcommands("error", "sql"))]
 pub async fn debug(_ctx: Context<'_>) -> Result<()> {
@@ -52,7 +52,11 @@ async fn sql(
     ctx: Context<'_>,
     #[description = "SELECT statement to run"] sql: String,
 ) -> Result<()> {
-    let sql_data = ctx.data().db_handle.raw_query_readonly(sql).await?;
+    let sql_data = ctx
+        .data()
+        .db_handle
+        .request(RawQueryReadonly { sql })
+        .await??;
 
     let response = format!("## SQL Response\n{}", sql_data.to_formatted());
 
@@ -109,7 +113,7 @@ Script path cannot contain `..`",
     let sql = fs::read_to_string(format!("{DB_SCRIPTS_DIR}/{script}"))
         .context(UserError(anyhow!("Failed to load SQL script")))?;
 
-    ctx.data().db_handle.raw_batch(sql).await?;
+    ctx.data().db_handle.request(RawBatch { sql }).await??;
 
     let container = CreateComponent::Container(
         CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(

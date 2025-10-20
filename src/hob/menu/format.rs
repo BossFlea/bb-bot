@@ -189,6 +189,6 @@ fn append_section(
             }
             write!(output, "{val}").unwrap();
         }
-        output.push_str(";");
+        output.push(';');
     }
 }

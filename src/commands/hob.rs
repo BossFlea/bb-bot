@@ -10,7 +10,6 @@ use poise::{
 };
 use tokio::sync::{Mutex, Notify};
 
-use crate::config::{HOB_LOG_CHANNEL, MENU_TIMEOUT_SECS};
 use crate::hob::{
     menu::{HobEditSession, HobEditState, SelectEntryState, format},
     types::HobEntry,
@@ -18,6 +17,10 @@ use crate::hob::{
 use crate::shared::{
     Context,
     menu::{navigation::GenerateMenu as _, timeout},
+};
+use crate::{
+    config::{HOB_LOG_CHANNEL, MENU_TIMEOUT_SECS},
+    hob::db::GetAllHobEntries,
 };
 
 #[poise::command(slash_command, subcommand_required, subcommands("manage", "send"))]
@@ -82,7 +85,7 @@ async fn send(
     let channel = channel.unwrap_or(ctx.channel_id());
     let suppress_backup_script = suppress_backup_script.unwrap_or(false);
 
-    let hob_entries = ctx.data().db_handle.get_all_hob_entries().await?;
+    let hob_entries = ctx.data().db_handle.request(GetAllHobEntries).await??;
 
     let containers = format::build_hob_messages(&hob_entries, 5)?;
     let message_count = containers.len();
@@ -128,14 +131,12 @@ The full HoB was sent to {} in the form of {message_count} messages.",
 }
 
 fn log_message(hob_entries: &[HobEntry]) -> Result<CreateMessage<'static>> {
-    let log_text = format!(
-        "## HoB Backup Script
+    let log_text = "## HoB Backup Script
 This script resets the tables responsible for storing HoB data to their current state \
-when executed on the bot database in the future."
-    );
+when executed on the bot database in the future.";
 
     let backup_file = CreateAttachment::bytes(
-        format::build_hob_backup_script(&hob_entries).into_bytes(),
+        format::build_hob_backup_script(hob_entries).into_bytes(),
         format!(
             "reset_hob_entries_{}.sql",
             chrono::Utc::now().format("%b%Y")

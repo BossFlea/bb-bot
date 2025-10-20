@@ -8,8 +8,23 @@ use poise::serenity_prelude::{
     colours::css::{POSITIVE, WARNING},
 };
 
-use crate::db::DbHandle;
 use crate::shared::types::Bingo;
+use crate::{db::DbHandle, role::db::role_config::InsertRoleMapping};
+
+#[derive(Debug, Clone)]
+pub struct LinkedUser {
+    pub discord: UserId,
+    pub mc_uuid: String,
+}
+
+impl LinkedUser {
+    pub fn new(discord: UserId, minecraft_uuid: String) -> Self {
+        Self {
+            discord,
+            mc_uuid: minecraft_uuid,
+        }
+    }
+}
 
 // NOTE: careful with updating network bingo enum (other than appending), always update the stored
 // bit sets in the database accordingly
@@ -67,6 +82,7 @@ impl NetworkBingo {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct RolePatterns {
     pub completions: Option<String>,
     pub specific_completion: Option<String>,
@@ -102,6 +118,10 @@ pub struct RoleMapping {
 }
 
 impl RoleMapping {
+    pub fn new(kind: RoleMappingKind, role: RoleId) -> Self {
+        Self { kind, role }
+    }
+
     pub fn to_list_entry(self) -> String {
         format!("- {} – {}", self.role.mention(), self.kind)
     }
@@ -181,7 +201,10 @@ impl RoleDelta {
                         (role.name == name && role.permissions == Permissions::empty())
                             .then_some(role.id)
                     }) {
-                        db.insert_role_mapping(id, kind).await?;
+                        db.request(InsertRoleMapping {
+                            role_mapping: RoleMapping::new(kind, id),
+                        })
+                        .await??;
                         role_ids.push(id);
                     }
                 }
@@ -229,8 +252,8 @@ impl RoleDeltaResolved {
 pub enum LinkStatus {
     NoDiscord,
     DifferentDiscord { other_discord: String },
-    AlreadyLinked { other_username: String },
-    DuplicateLink { uuid: String, other_discord: UserId },
+    DuplicateMinecraft { other_username: String },
+    DuplicateDiscord { uuid: String, other_discord: UserId },
     Success,
 }
 
@@ -247,7 +270,7 @@ impl LinkStatus {
 
                 CreateComponent::Container(CreateContainer::new(vec![text]).accent_color(WARNING))
             }
-            LinkStatus::DifferentDiscord { other_discord } => {
+            LinkStatus::DifferentDiscord { other_discord, .. } => {
                 let text = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "## Wrong Discord account found
 **Your linked Discord account on Hypixel is currently set to: `{other_discord}`**
@@ -257,7 +280,7 @@ impl LinkStatus {
 
                 CreateComponent::Container(CreateContainer::new(vec![text]).accent_color(WARNING))
             }
-            LinkStatus::AlreadyLinked { other_username } => {
+            LinkStatus::DuplicateMinecraft { other_username } => {
                 let text = CreateSectionComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "## Account already linked
 **Your Discord account is currently linked to `{other_username}`!**
@@ -281,7 +304,7 @@ impl LinkStatus {
             // contains an existing linking entry.
             // This makes is safe to provide an unlink button since the user has proven
             // ownership of the account
-            LinkStatus::DuplicateLink {
+            LinkStatus::DuplicateDiscord {
                 uuid,
                 other_discord,
             } => {

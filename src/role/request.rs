@@ -1,19 +1,32 @@
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
-use poise::serenity_prelude::colours::branding::YELLOW;
-use poise::serenity_prelude::colours::css::POSITIVE;
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, Context as SerenityContext, CreateButton, CreateComponent,
     CreateContainer, CreateSection, CreateSectionAccessory, CreateSectionComponent,
     CreateTextDisplay, Member, Mentionable as _, RoleId, User, UserId,
+    colours::{branding::YELLOW, css::POSITIVE},
 };
 use tracing::warn;
 
 use crate::config::BOT_MAINTAINER;
-use crate::role::types::{LinkStatus, NetworkBingo};
+use crate::role::{
+    db::{
+        cache::{
+            CacheBingoRank, CacheCompletions, CacheImmortal, CacheNetworkBingos, CachedBingoRank,
+            CachedCompletions, CachedImmortal, CachedNetworkBingos,
+        },
+        link::InsertLinkedUser,
+        role_config::{
+            BuildRoleDeltaBingoRank, BuildRoleDeltaCompletions, BuildRoleDeltaImmortal,
+            BuildRoleDeltaNetworkBingos,
+        },
+    },
+    types::{LinkStatus, LinkedUser, NetworkBingo},
+};
 use crate::shared::{
     BotData,
+    db::{GetBingoData, GetIsNetworkBingo},
     types::{Bingo, BitSet},
 };
 
@@ -39,16 +52,19 @@ pub async fn link_user(ctx: &SerenityContext, user: &User, mc_name: &str) -> Res
                 });
             }
 
-            let (duplicate_discord, duplicate_uuid) =
-                db.insert_linked_user(user.id, uuid.clone()).await?;
+            let (duplicate_discord, duplicate_uuid) = db
+                .request(InsertLinkedUser {
+                    user: LinkedUser::new(user.id, uuid.clone()),
+                })
+                .await??;
 
             if let Some(uuid) = duplicate_uuid {
-                return Ok(LinkStatus::AlreadyLinked {
+                return Ok(LinkStatus::DuplicateMinecraft {
                     other_username: api.username(&uuid).await?,
                 });
             }
             if let Some(discord) = duplicate_discord {
-                return Ok(LinkStatus::DuplicateLink {
+                return Ok(LinkStatus::DuplicateDiscord {
                     uuid,
                     other_discord: discord,
                 });
@@ -209,30 +225,38 @@ pub async fn update_roles(
 
     let discord_roles = Arc::new(discord_user.roles.clone());
 
-    let user_roles = player_roles(ctx, uuid).await?;
+    let player_roles = player_roles(ctx, uuid).await?;
 
     let mut role_delta = db
-        .get_roles_from_bingos(Arc::clone(&discord_roles), user_roles.blackouts.clone())
-        .await?;
+        .request(BuildRoleDeltaCompletions {
+            bingos: player_roles.blackouts.clone(),
+            user_roles: Arc::clone(&discord_roles),
+        })
+        .await??;
 
     role_delta.merge(
-        db.get_roles_from_network_bingos(
-            Arc::clone(&discord_roles),
-            user_roles.network_bingos.clone(),
-        )
-        .await?,
+        db.request(BuildRoleDeltaNetworkBingos {
+            bingos: player_roles.network_bingos.clone(),
+            user_roles: Arc::clone(&discord_roles),
+        })
+        .await??,
     );
 
     role_delta.merge(
-        db.get_roles_bingo_rank(Arc::clone(&discord_roles), user_roles.bingo_rank)
-            .await?,
+        db.request(BuildRoleDeltaBingoRank {
+            rank: player_roles.bingo_rank,
+            user_roles: Arc::clone(&discord_roles),
+        })
+        .await??,
     );
 
-    if user_roles.immortal
-        && let Some(role) = db.get_role_immortal(Arc::clone(&discord_roles)).await?
-    {
-        role_delta.add.push(role);
-    }
+    role_delta.merge(
+        db.request(BuildRoleDeltaImmortal {
+            has_achieved: player_roles.immortal,
+            user_roles: Arc::clone(&discord_roles),
+        })
+        .await??,
+    );
 
     let guild_roles = discord_user
         .guild_id
@@ -244,7 +268,9 @@ pub async fn update_roles(
     let role_delta = role_delta.resolve(db, guild_roles).await?;
 
     if role_delta.is_empty() {
-        return Ok(RoleRequestStatus::NoChanges { roles: user_roles });
+        return Ok(RoleRequestStatus::NoChanges {
+            roles: player_roles,
+        });
     }
 
     role_delta
@@ -255,7 +281,7 @@ pub async fn update_roles(
     Ok(RoleRequestStatus::Updated {
         added: role_delta.add,
         removed: role_delta.remove,
-        roles: user_roles,
+        roles: player_roles,
     })
 }
 
@@ -266,11 +292,16 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
 
     let (current_bingo, bingo_active) = api.update_current_bingo(db).await?;
     let current_network_bingo = NetworkBingo::ALL.last().map(|b| *b as u8).unwrap_or(0);
-    let network_bingo_active = db.get_is_network_bingo().await?.unwrap_or(false);
+    let network_bingo_active = db.request(GetIsNetworkBingo).await??.unwrap_or(false);
 
     let bingo_completions = db
-        .complete_bingo_data(
-            match db.cache_lookup_completions(uuid.to_string(), 0).await? {
+        .request(GetBingoData {
+            bingo_ids: match db
+                .request(CachedCompletions {
+                    uuid: uuid.to_string(),
+                })
+                .await??
+            {
                 // cache hit
                 Some(bitset) => bitset
                     .get_all_set()
@@ -281,26 +312,27 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
                 None => {
                     let completions = api.bingo_completions(uuid).await?;
                     if !bingo_active || completions.contains(&current_bingo.get_id()) {
-                        db.cache_insert_completions(
-                            uuid.to_string(),
-                            current_bingo.get_id(),
-                            BitSet::from_indexes(&completions),
-                        )
-                        .await?;
+                        db.request(CacheCompletions {
+                            uuid: uuid.to_string(),
+                            completions: BitSet::from_indexes(&completions),
+                        })
+                        .await??;
                     }
                     completions
                 }
             },
-        )
-        .await?;
+        })
+        .await??;
 
     let current_bingo_completed = bingo_completions
         .iter()
         .any(|b| b.get_id() == current_bingo.get_id());
 
     let network_bingo_completions: Vec<NetworkBingo> = match db
-        .cache_lookup_network_completions(uuid.to_string(), current_network_bingo)
-        .await?
+        .request(CachedNetworkBingos {
+            uuid: uuid.to_string(),
+        })
+        .await??
     {
         // cache hit
         Some(bitset) => bitset
@@ -314,12 +346,13 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
             if completions.contains(&NetworkBingo::from_u8(current_network_bingo))
                 || !network_bingo_active
             {
-                db.cache_insert_network_completions(
-                    uuid.to_string(),
-                    current_network_bingo,
-                    BitSet::from_indexes(&completions.iter().map(|b| *b as u8).collect::<Vec<_>>()),
-                )
-                .await?;
+                db.request(CacheNetworkBingos {
+                    uuid: uuid.to_string(),
+                    completions: BitSet::from_indexes(
+                        &completions.iter().map(|b| *b as u8).collect::<Vec<_>>(),
+                    ),
+                })
+                .await??;
             }
             completions
         }
@@ -328,11 +361,15 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
     .collect();
 
     let cached_bingo_rank = db
-        .cache_lookup_bingo_rank(uuid.to_string(), current_bingo.get_id())
-        .await?;
+        .request(CachedBingoRank {
+            uuid: uuid.to_string(),
+        })
+        .await??;
     let cached_immortal = db
-        .cache_lookup_immortal(uuid.to_string(), current_bingo.get_id())
-        .await?;
+        .request(CachedImmortal {
+            uuid: uuid.to_string(),
+        })
+        .await??;
 
     let (bingo_rank, immortal) = match (cached_bingo_rank, cached_immortal) {
         // cache hit on both bingo rank and immortal
@@ -353,24 +390,22 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
                                 .any(|b| b.get_id() == data.created_during);
 
                         if !bingo_active || current_bingo_completed {
-                            db.cache_insert_immortal(
-                                uuid.to_string(),
-                                current_bingo.get_id(),
-                                current_immortal,
-                            )
-                            .await?;
+                            db.request(CacheImmortal {
+                                uuid: uuid.to_string(),
+                                has_achieved: current_immortal,
+                            })
+                            .await??;
                         }
                         current_immortal
                     }
                 };
 
-                if data.created_during == current_bingo.get_id() {
-                    db.cache_insert_bingo_rank(
-                        uuid.to_string(),
-                        current_bingo.get_id(),
-                        data.bingo_rank,
-                    )
-                    .await?;
+                if !bingo_active || data.created_during == current_bingo.get_id() {
+                    db.request(CacheBingoRank {
+                        uuid: uuid.to_string(),
+                        rank: data.bingo_rank,
+                    })
+                    .await??;
                 }
 
                 (data.bingo_rank, immortal)

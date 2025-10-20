@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
         .framework(framework)
         .event_handler(Handler)
         .data(Arc::new(BotData {
-            db_handle: DbHandle { db_tx },
+            db_handle: DbHandle::new(db_tx),
             api_handle: ApiHandle::new(api_key),
             hob_sessions: Arc::new(Mutex::new(HashMap::new())),
             role_sessions: Arc::new(Mutex::new(HashMap::new())),

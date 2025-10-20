@@ -8,6 +8,7 @@ use poise::serenity_prelude::{
 use tokio::sync::Notify;
 
 use crate::db::DbHandle;
+use crate::hob::db::{GetAllHobEntries, GetHobEntry, GetHobSubentry, SearchEntriesContent};
 use crate::shared::menu::{
     MenuMessage,
     navigation::{Backtrack, BacktrackState, GenerateMenu},
@@ -167,8 +168,13 @@ impl GenerateMenu for HobEditState {
 impl GenerateMenu for SelectEntryState {
     async fn generate(&mut self, db: &DbHandle, menu_id: u64) -> Result<MenuMessage<'static>> {
         let hob_entries = match &self.search_query {
-            Some(query) => db.search_entries_with_content(query.to_string()).await?,
-            None => db.get_all_hob_entries().await?,
+            Some(query) => {
+                db.request(SearchEntriesContent {
+                    query: query.to_string(),
+                })
+                .await??
+            }
+            None => db.request(GetAllHobEntries).await??,
         };
         Ok(select_entry::generate_entry_list(
             menu_id,
@@ -182,8 +188,8 @@ impl GenerateMenu for SelectEntryState {
 impl GenerateMenu for ViewEntryState {
     async fn generate(&mut self, db: &DbHandle, menu_id: u64) -> Result<MenuMessage<'static>> {
         let hob_entry = db
-            .get_hob_entry_by_id(self.id)
-            .await?
+            .request(GetHobEntry { id: self.id })
+            .await??
             .context("Unable to find entry by ID")?;
 
         Ok(view_entry::generate_entry(
@@ -198,8 +204,11 @@ impl GenerateMenu for ViewEntryState {
 impl GenerateMenu for ViewSubentryState {
     async fn generate(&mut self, db: &DbHandle, menu_id: u64) -> Result<MenuMessage<'static>> {
         let subentry = db
-            .get_ongoing_subentry_by_id(self.id, self.entry_id)
-            .await?
+            .request(GetHobSubentry {
+                id: self.id,
+                entry_id: self.entry_id,
+            })
+            .await??
             .context("Unable to find subentry by ID")?;
 
         Ok(view_entry::generate_subentry(menu_id, subentry))

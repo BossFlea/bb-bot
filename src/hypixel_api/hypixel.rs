@@ -7,7 +7,9 @@ use tracing::warn;
 
 use crate::db::DbHandle;
 use crate::hypixel_api::ApiHandle;
+use crate::role::db::cache::{CacheHypixelPlayerEndpoint, CachedHypixelPlayerEndpoint};
 use crate::role::types::NetworkBingo;
+use crate::shared::db::{AddBingoMapping, SetCurrentBingo};
 use crate::shared::types::{Bingo, BingoKind};
 
 pub mod network_bingo;
@@ -73,10 +75,20 @@ pub async fn get_current_bingo_data(handle: &ApiHandle, db: &DbHandle) -> Result
         .context("No end time found for current bingo")?
         / 1000) as u32;
 
-    db.update_current_bingo(bingo_id, start, end).await?;
-    let bingo = db.add_bingo_mapping(bingo_id, bingo_kind).await?;
+    db.request(SetCurrentBingo {
+        bingo_id,
+        start,
+        end,
+    })
+    .await??;
+    let bingo = db
+        .request(AddBingoMapping {
+            bingo_id,
+            bingo_kind,
+        })
+        .await??;
 
-    Ok((bingo, Utc::now().timestamp() as u32 > end))
+    Ok((bingo, (Utc::now().timestamp() as u32) < end))
 }
 
 pub async fn linked_discord(
@@ -88,16 +100,21 @@ pub async fn linked_discord(
     // only fetch from API if no valid cached result exists
     // NOTE: this is necessary because of an undocumented 60s rate limit on fetching the same
     // player, which applies *only* to application keys, not dev keys
-    let json = match db.cache_lookup_player_endpoint(uuid.to_string()).await? {
+    let json = match db
+        .request(CachedHypixelPlayerEndpoint {
+            uuid: uuid.to_string(),
+        })
+        .await??
+    {
         Some((_, json_str)) => Value::from_str(&json_str)?,
         None => {
             let (json, raw_json) = query_api(handle, "/v2/player", &params).await?;
-            db.cache_insert_player_endpoint(
-                uuid.to_string(),
-                chrono::Utc::now().timestamp(),
-                raw_json,
-            )
-            .await?;
+            db.request(CacheHypixelPlayerEndpoint {
+                uuid: uuid.to_string(),
+                timestamp: chrono::Utc::now().timestamp(),
+                json: raw_json,
+            })
+            .await??;
             json
         }
     };
@@ -228,16 +245,21 @@ pub async fn network_bingo_completions(
 ) -> Result<Vec<NetworkBingo>> {
     let params = [("uuid", uuid)];
     // only fetch from API if no valid cached result exists
-    let json = match db.cache_lookup_player_endpoint(uuid.to_string()).await? {
+    let json = match db
+        .request(CachedHypixelPlayerEndpoint {
+            uuid: uuid.to_string(),
+        })
+        .await??
+    {
         Some((_, json_str)) => Value::from_str(&json_str)?,
         None => {
             let (json, raw_json) = query_api(handle, "/v2/player", &params).await?;
-            db.cache_insert_player_endpoint(
-                uuid.to_string(),
-                chrono::Utc::now().timestamp(),
-                raw_json,
-            )
-            .await?;
+            db.request(CacheHypixelPlayerEndpoint {
+                uuid: uuid.to_string(),
+                timestamp: chrono::Utc::now().timestamp(),
+                json: raw_json,
+            })
+            .await??;
             json
         }
     };
