@@ -1,16 +1,20 @@
 use std::str::FromStr as _;
 
-use anyhow::{Context as _, Result, bail};
+use anyhow::{bail, Context as _, Result};
 use chrono::{DateTime, Datelike as _, Utc};
 use serde_json::Value;
 use tracing::warn;
 
 use crate::db::DbHandle;
 use crate::hypixel_api::ApiHandle;
-use crate::role::db::cache::{CacheHypixelPlayerEndpoint, CachedHypixelPlayerEndpoint};
-use crate::role::types::NetworkBingo;
-use crate::shared::db::{AddBingoMapping, SetCurrentBingo};
-use crate::shared::types::{Bingo, BingoKind};
+use crate::role::{
+    db::cache::{CacheHypixelPlayerEndpoint, CachedHypixelPlayerEndpoint},
+    types::NetworkBingo,
+};
+use crate::shared::{
+    db::{AddBingoMapping, SetCurrentBingo},
+    types::{Bingo, BingoKind},
+};
 
 pub mod network_bingo;
 

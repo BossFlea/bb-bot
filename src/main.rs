@@ -25,7 +25,7 @@ mod hypixel_api;
 mod log;
 mod role;
 mod shared;
-mod splashlist;
+mod splashes;
 
 fn get_env_var(name: &str) -> Result<String> {
     env::var(name).map_err(|err| anyhow!("Failed to load environment variable '{name}': {err:#}"))
@@ -58,6 +58,7 @@ async fn main() -> Result<()> {
         commands::hob::hob(),
         commands::role::rolerequest(),
         commands::splashlist::splashlist(),
+        commands::latestsplash::latest_splash(),
         commands::register::register(),
         commands::register::unregister(),
     ];
@@ -67,8 +68,12 @@ async fn main() -> Result<()> {
         cmd.default_member_permissions = Permissions::MANAGE_GUILD;
     }
 
-    // Only needs to receive the `INTERACTION_CREATE` event, as well as these for prefix commands
-    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
+    // NOTE: `GUILD_MESSAGES` is only needed for the `register` prefix command. `MESSAGE_CONTENT`
+    // is required for the same reason, as well as for splash message fetching. `GUILD_MEMBERS` is
+    // needed to fetch all members with the splasher role.
+    let intents = GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILD_MEMBERS;
 
     let prefix_options = PrefixFrameworkOptions {
         dynamic_prefix: Some(|ctx| {

@@ -2,18 +2,20 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use chrono::{Datelike, TimeZone};
-use poise::CreateReply;
-use poise::serenity_prelude::{
-    CreateAttachment, CreateComponent, CreateContainer, CreateMediaGallery, CreateMediaGalleryItem,
-    CreateTextDisplay, CreateUnfurledMediaItem, GenericChannelId, GetMessages, Mentionable as _,
-    Message, MessageFlags, MessageId, Timestamp, UserId,
+use poise::{
+    CreateReply,
+    serenity_prelude::{
+        CreateAttachment, CreateComponent, CreateContainer, CreateMediaGallery,
+        CreateMediaGalleryItem, CreateTextDisplay, CreateUnfurledMediaItem, Mentionable as _,
+        MessageFlags, Timestamp, UserId,
+    },
 };
-use regex::Regex;
 
-use crate::config::{SPLASH_ROLE, SPLASHES_CHANNEL, TY_CHANNEL};
+use crate::config::{SPLASH_PING_ROLE, TY_CHANNEL};
 use crate::shared::{Context, types::BingoKind};
+use crate::splashes::fetch;
 
-pub mod chart;
+mod chart;
 
 #[derive(Debug, Clone)]
 pub struct SplashList {
@@ -22,8 +24,8 @@ pub struct SplashList {
 }
 
 impl SplashList {
-    pub fn new(items: Vec<(Timestamp, UserId)>, bingo_days: usize) -> Self {
-        Self { items, bingo_days }
+    pub fn new(items: Vec<(Timestamp, UserId)>, bingo_days: usize) -> SplashList {
+        SplashList { items, bingo_days }
     }
 
     pub fn len(&self) -> usize {
@@ -58,7 +60,7 @@ impl SplashList {
                 continue;
             }
 
-            *day_maps[day_of_month - 1].entry(*user_id).or_insert(0) += 1;
+            *day_maps[day_of_month - 1].entry(user_id).or_insert(0) += 1;
         }
 
         let top_3: Vec<UserId> = self
@@ -75,7 +77,7 @@ impl SplashList {
                 let mut rest = 0u32;
 
                 for (&user, &count) in day {
-                    if let Some(pos) = top_3.iter().position(|&u| u == user) {
+                    if let Some(pos) = top_3.iter().position(|u| u == user) {
                         counts[pos] = count;
                     } else {
                         rest += count;
@@ -87,56 +89,6 @@ impl SplashList {
             })
             .collect()
     }
-}
-
-async fn fetch_splashes(
-    ctx: &Context<'_>,
-    channel: GenericChannelId,
-    bingo_days: usize,
-) -> Result<SplashList> {
-    let mut messages: Vec<Message> = Vec::new();
-    let mut last_id: Option<MessageId> = None;
-
-    let start_timestamp = timestamp_start_of_day_est(1);
-    let end_timestamp = timestamp_start_of_day_est(bingo_days as u32 + 1);
-
-    let hub_regex = Regex::new(r"(?i)(?:dungeon|d|dung)?[\s*_~`|]*hub[^\d\n]*\d+").unwrap();
-
-    'outer: loop {
-        let mut builder = GetMessages::new().limit(100);
-
-        if let Some(id) = last_id {
-            builder = builder.before(id);
-        }
-        let batch = channel.messages(ctx, builder).await?;
-
-        if batch.is_empty() {
-            break;
-        }
-
-        last_id = batch.last().map(|m| m.id);
-
-        for message in batch {
-            if message.timestamp > end_timestamp {
-                continue;
-            }
-            if message.timestamp < start_timestamp {
-                break 'outer;
-            }
-            if message.content.contains(&SPLASH_ROLE.mention().to_string())
-                && hub_regex.is_match(&message.content)
-            {
-                messages.push(message);
-            }
-        }
-    }
-
-    let splashes: Vec<_> = messages
-        .into_iter()
-        .map(|m| (m.timestamp, m.author.id))
-        .collect();
-
-    Ok(SplashList::new(splashes, bingo_days))
 }
 
 fn timestamp_start_of_day_est(day_of_month: u32) -> Timestamp {
@@ -175,7 +127,17 @@ pub async fn generate_message(ctx: &Context<'_>) -> Result<CreateReply<'static>>
         14
     };
 
-    let splashes = fetch_splashes(ctx, SPLASHES_CHANNEL, bingo_days).await?;
+    let start_timestamp = timestamp_start_of_day_est(1);
+    let end_timestamp = timestamp_start_of_day_est(bingo_days as u32 + 1);
+
+    let mut fetcher = fetch::FetchSplashes::new();
+    let splash_messages: Vec<_> = fetcher
+        .splashes_during(ctx.http(), start_timestamp, end_timestamp)
+        .await?
+        .iter()
+        .map(|m| (m.timestamp, m.author.id))
+        .collect();
+    let splashes = SplashList::new(splash_messages, bingo_days);
 
     let total_splashes = splashes.len();
 
@@ -215,7 +177,7 @@ Hourly Average: **{hourly_average:.2}** splashes/h
 ||{}||
         ",
         TY_CHANNEL.mention(),
-        SPLASH_ROLE.mention()
+        SPLASH_PING_ROLE.mention()
     ));
 
     let chart_bytes =

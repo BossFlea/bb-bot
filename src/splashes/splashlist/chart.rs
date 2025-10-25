@@ -10,11 +10,11 @@ use plotters::{
 };
 use resvg::{tiny_skia, usvg};
 
-use crate::splashlist::SplashList;
+use crate::splashes::splashlist::SplashList;
 
 pub fn distribution_png_bytes(splashes: &SplashList) -> Result<Vec<u8>> {
     let svg = distribution_chart_svg(splashes)?;
-    // NOTE: Charts are initially created using `plotters`' SVG backend, before being rendered
+    // NOTE: Charts are initially created using the `plotters` SVG backend, before being rendered
     // using `resvg` and encoded as a PNG to be sent on Discord. The reason for the SVG 'detour' is
     // that the Bitmap backend doesn't support transparency. (This won't be used often enough to
     // consider switching libraries at the moment)
@@ -141,10 +141,6 @@ impl<'a> StackedAreaChartContent<'a> {
 
 /// Renders SVG string, returns encoded PNG data
 fn render_svg(svg: &str) -> Result<Vec<u8>> {
-    // // debug
-    // let mut file = File::create("out.svg")?;
-    // file.write_all(svg.as_bytes())?;
-
     let mut opt = usvg::Options::default();
     opt.fontdb_mut().load_system_fonts();
 
