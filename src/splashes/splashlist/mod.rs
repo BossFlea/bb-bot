@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{Datelike, TimeZone};
 use poise::{
-    CreateReply,
     serenity_prelude::{
         CreateAttachment, CreateComponent, CreateContainer, CreateMediaGallery,
         CreateMediaGalleryItem, CreateTextDisplay, CreateUnfurledMediaItem, Mentionable as _,
         MessageFlags, Timestamp, UserId,
     },
+    CreateReply,
 };
 
 use crate::config::{SPLASH_PING_ROLE, TY_CHANNEL};
-use crate::shared::{Context, types::BingoKind};
+use crate::shared::{types::BingoKind, Context};
 use crate::splashes::fetch;
 
 mod chart;
@@ -164,7 +164,7 @@ pub async fn generate_message(ctx: &Context<'_>) -> Result<CreateReply<'static>>
 ### Overview
 Total Splashes: **{total_splashes}**
 Hourly Average: **{hourly_average:.2}** splashes/h
-### Distribution Chart
+### Distribution Graph
         ",
         current_month_name_est(),
     ));

@@ -3,7 +3,7 @@ use poise::serenity_prelude::CreateAllowedMentions;
 
 use crate::config::SPLASH_PING_ROLE;
 use crate::shared::Context;
-use crate::splashes;
+use crate::splashes::splashlist;
 
 /// Create and send the splashlist
 #[poise::command(
@@ -23,7 +23,7 @@ pub async fn splashlist(
         ctx.defer().await?;
     }
 
-    let message = splashes::splashlist::generate_message(&ctx).await?;
+    let message = splashlist::generate_message(&ctx).await?;
     ctx.send(
         message
             .allowed_mentions(CreateAllowedMentions::new().roles(vec![SPLASH_PING_ROLE]))

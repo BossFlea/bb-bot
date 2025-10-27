@@ -1,38 +1,39 @@
 use std::cmp::Ordering;
 
-use anyhow::{Context as _, Result, anyhow};
+use anyhow::{anyhow, Context as _, Result};
 use chrono::{Datelike as _, TimeZone as _};
 use poise::{
-    CreateReply,
     serenity_prelude::{
-        ChunkGuildFilter, CreateAllowedMentions, CreateComponent, CreateContainer,
-        CreateTextDisplay, Event, Mentionable as _, MessageFlags, Timestamp, UserId, collector,
+        collector,
         colours::{
             branding::YELLOW,
             css::{DANGER, POSITIVE, WARNING},
         },
         futures::StreamExt,
+        ChunkGuildFilter, CreateAllowedMentions, CreateComponent, CreateContainer,
+        CreateTextDisplay, Event, Mentionable as _, MessageFlags, Timestamp, UserId,
     },
+    CreateReply,
 };
 
+use crate::config::SPLASHER_ROLE;
 use crate::error::UserError;
-use crate::{config::SPLASHER_ROLE, shared::menu::generate_id};
-use crate::{shared::Context, splashes};
+use crate::shared::{menu::generate_id, Context};
+use crate::splashes::lastsplashed;
 
 #[poise::command(
     slash_command,
-    rename = "latest-splash",
     subcommand_required,
-    subcommands("latest_splash_list", "latest_splash_get"),
+    subcommands("lastsplashed_list", "lastsplashed_get"),
     required_bot_permissions = "VIEW_CHANNEL | READ_MESSAGE_HISTORY"
 )]
-pub async fn latest_splash(_ctx: Context<'_>) -> Result<()> {
+pub async fn lastsplashed(_ctx: Context<'_>) -> Result<()> {
     unreachable!("This shouldn't be possible to invoke")
 }
 
-/// Compile a list of when every splasher last splashed. Can take a few minutes due to rate limits!
+/// Compile a list of every splasher's most recent splash. Can take a few minutes due to rate limits!
 #[poise::command(slash_command, rename = "list")]
-async fn latest_splash_list(ctx: Context<'_>) -> Result<()> {
+async fn lastsplashed_list(ctx: Context<'_>) -> Result<()> {
     ctx.defer().await?;
 
     let guild = ctx
@@ -80,13 +81,13 @@ async fn latest_splash_list(ctx: Context<'_>) -> Result<()> {
         }
     }
 
-    let last_splashes = splashes::latest_splash_batch(ctx.http(), &splashers).await?;
+    let last_splashes = lastsplashed::latest_splash_batch(ctx.http(), &splashers).await?;
 
     let container_this =
         CreateComponent::Container(
             CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
                 format!(
-                    "## Individual latest splashes
+                    "## Most recent splashes
 Detected {} splashers.
 ### This month\n{}",
                     splashers.len(),
@@ -174,26 +175,26 @@ fn est_start_of_month_relative(offset_months: i32) -> Timestamp {
     Timestamp::from_unix_timestamp(offset_month.timestamp()).unwrap()
 }
 
-/// View when a specific splasher's last splash was. Can take a while due to rate limits.
+/// View a specific splasher's most recent splash. Can take a while due to rate limits.
 #[poise::command(
     slash_command,
     rename = "get",
     required_bot_permissions = "VIEW_CHANNEL | READ_MESSAGE_HISTORY"
 )]
-async fn latest_splash_get(ctx: Context<'_>, splasher: UserId) -> Result<()> {
+async fn lastsplashed_get(ctx: Context<'_>, splasher: UserId) -> Result<()> {
     ctx.defer().await?;
 
-    let last_splash = splashes::latest_splash(ctx.http(), splasher).await?;
+    let last_splash = lastsplashed::latest_splash(ctx.http(), splasher).await?;
 
     let text = match last_splash {
         Some(timestamp) => CreateTextDisplay::new(format!(
-            "## Latest splash
+            "## Most recent splash
 {} last splashed on <t:{}:D>.",
             splasher.mention(),
             timestamp.unix_timestamp()
         )),
         None => CreateTextDisplay::new(format!(
-            "## Latest splash
+            "## Most recent splash
 {} last splashed more than six months ago or has never splashed.",
             splasher.mention()
         )),

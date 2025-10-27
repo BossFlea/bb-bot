@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
         commands::hob::hob(),
         commands::role::rolerequest(),
         commands::splashlist::splashlist(),
-        commands::latestsplash::latest_splash(),
+        commands::lastsplashed::lastsplashed(),
         commands::register::register(),
         commands::register::unregister(),
     ];
