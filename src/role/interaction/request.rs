@@ -10,15 +10,12 @@ use poise::serenity_prelude::{
 };
 use tracing::info;
 
+use crate::config::{BOT_MAINTAINER, MANUAL_ROLE_CHANNEL};
 use crate::role::{
-    db::link::{RemoveLinkedUserByDiscord, RemoveLinkedUserByMinecraft},
+    db::link::{GetLinkedUserByDiscord, RemoveLinkedUserByDiscord, RemoveLinkedUserByMinecraft},
     interaction::modal,
 };
 use crate::shared::BotData;
-use crate::{
-    config::{BOT_MAINTAINER, MANUAL_ROLE_CHANNEL},
-    role::db::link::GetLinkedUserByDiscord,
-};
 
 pub async fn handle_interaction(
     ctx: &SerenityContext,
@@ -200,7 +197,7 @@ Feel free to contact staff and remind them to create the role.
 \n> ### What are the criteria for the Network Bingo roles?
 For all network bingo events **before 2025**, you were required to complete **all three cards**. \
 Starting from Anniversary Bingo 2025, Hypixel changed the number of cards \
-and you are now required to complete **any easy and any hard** card.
+and you are now required to complete **any easy and any hard** card of your choice.
 -# Note: For the bot to detect most completions, you need to **claim the blackout reward** of the card.
 \nIf you have any other questions or you noticed an issue with the bot, ask Staff or DM {} for bot issues.", MANUAL_ROLE_CHANNEL.mention(), BOT_MAINTAINER.mention())
             ));

@@ -70,15 +70,16 @@ async fn send(
 -# Note: If you've never done this before, you will be prompted to link your Hypixel profile.
 ### Bingo Rank role
 Mirrors your in-game bingo rank
-### Bingo Blackout counter
+-# Rank upgrades won't be detected until you create a new bingo profile.
+### Bingo Blackout role
 Counter of how many bingo cards you've completed
 ### Special Blackout roles
-Blackout roles for extreme/secret bingo events
+Blackout roles for individual extreme/secret bingo events
 ### Network Bingo completion roles
-Roles for completing hypixel's seasonal network bingo events
+Roles for completing Hypixel's seasonal network bingo events
 ### 'Immortal' role
 Awarded for completing a bingo card without dying a single time
--# Note: This will only work if your bingo profile still has no deaths and hasn't been deleted yet!
+-# This will only work automatically if your bingo profile still has no deaths and hasn't been deleted yet!
 
 **» All other roles are granted manually in {} !**",
         MANUAL_ROLE_CHANNEL.mention()
