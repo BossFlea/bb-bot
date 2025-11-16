@@ -17,21 +17,22 @@ use poise::{
 };
 use tokio::sync::{Mutex, Notify};
 
+use crate::config::{MANUAL_ROLE_CHANNEL, MENU_TIMEOUT_SECS};
+use crate::error::UserError;
 use crate::role::{
-    db::link::{GetLinkedUserByMinecraft, RemoveLinkedUserByDiscord, UpdateLinkedUser},
+    db::link::{
+        GetLinkedUserByDiscord, GetLinkedUserByMinecraft, RemoveLinkedUserByDiscord,
+        UpdateLinkedUser,
+    },
     menu::{RoleConfigSession, RoleConfigState},
     request,
     types::{LinkedUser, RoleMappingKindRaw},
 };
 use crate::shared::{
     Context,
+    db::SetIsNetworkBingo,
     menu::{navigation::GenerateMenu as _, timeout},
 };
-use crate::{
-    config::{MANUAL_ROLE_CHANNEL, MENU_TIMEOUT_SECS},
-    shared::db::SetIsNetworkBingo,
-};
-use crate::{error::UserError, role::db::link::GetLinkedUserByDiscord};
 
 #[poise::command(
     slash_command,
@@ -232,7 +233,11 @@ async fn force(_ctx: Context<'_>) -> Result<()> {
 }
 
 /// Update another user's roles (use '/rolerequest inspect stats' to check stats without updating roles)
-#[poise::command(slash_command, rename = "update")]
+#[poise::command(
+    slash_command,
+    rename = "update",
+    required_bot_permissions = "MANAGE_ROLES"
+)]
 async fn force_update(
     ctx: Context<'_>,
     #[description = "Whose roles to update"] user: Member,
@@ -256,7 +261,7 @@ async fn force_update(
     ctx.send(
         CreateReply::default()
             .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
+            .components(vec![container]),
     )
     .await?;
 
@@ -295,7 +300,7 @@ Linked `{minecraft}` to {}, discarding any existing links for either account.",
     ctx.send(
         CreateReply::default()
             .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
+            .components(vec![container]),
     )
     .await?;
 
@@ -337,7 +342,7 @@ Unlinked `{username}` from {}.",
     ctx.send(
         CreateReply::default()
             .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
+            .components(vec![container]),
     )
     .await?;
 

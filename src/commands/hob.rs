@@ -10,17 +10,15 @@ use poise::{
 };
 use tokio::sync::{Mutex, Notify};
 
+use crate::config::{HOB_LOG_CHANNEL, MENU_TIMEOUT_SECS};
 use crate::hob::{
+    db::GetAllHobEntries,
     menu::{HobEditSession, HobEditState, SelectEntryState, format},
     types::HobEntry,
 };
 use crate::shared::{
     Context,
     menu::{navigation::GenerateMenu as _, timeout},
-};
-use crate::{
-    config::{HOB_LOG_CHANNEL, MENU_TIMEOUT_SECS},
-    hob::db::GetAllHobEntries,
 };
 
 #[poise::command(slash_command, subcommand_required, subcommands("manage", "send"))]

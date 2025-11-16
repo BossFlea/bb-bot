@@ -12,9 +12,12 @@ use poise::{
 };
 use tracing::warn;
 
-use crate::shared::Context;
-use crate::{config::DB_SCRIPTS_DIR, shared::db::RawQueryReadonly};
-use crate::{error::UserError, shared::db::RawBatch};
+use crate::config::DB_SCRIPTS_DIR;
+use crate::error::UserError;
+use crate::shared::{
+    Context,
+    db::{RawBatch, RawQueryReadonly},
+};
 
 #[poise::command(slash_command, subcommand_required, subcommands("error", "sql"))]
 pub async fn debug(_ctx: Context<'_>) -> Result<()> {
@@ -70,7 +73,7 @@ async fn sql(
     ctx.send(
         CreateReply::new()
             .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
+            .components(vec![container]),
     )
     .await?;
 
@@ -128,7 +131,7 @@ The `{script}` SQL script executed without errors."
     ctx.send(
         CreateReply::new()
             .flags(MessageFlags::IS_COMPONENTS_V2)
-            .components(vec![container]), // .ephemeral(true),
+            .components(vec![container]),
     )
     .await?;
 
