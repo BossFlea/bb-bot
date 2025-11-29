@@ -1,7 +1,5 @@
 use anyhow::Result;
-use poise::serenity_prelude::CreateAllowedMentions;
 
-use crate::config::SPLASH_PING_ROLE;
 use crate::shared::Context;
 use crate::splashes::splashlist;
 
@@ -24,12 +22,7 @@ pub async fn splashlist(
     }
 
     let message = splashlist::generate_message(&ctx).await?;
-    ctx.send(
-        message
-            .allowed_mentions(CreateAllowedMentions::new().roles(vec![SPLASH_PING_ROLE]))
-            .ephemeral(ephemeral),
-    )
-    .await?;
+    ctx.send(message.ephemeral(ephemeral)).await?;
 
     Ok(())
 }

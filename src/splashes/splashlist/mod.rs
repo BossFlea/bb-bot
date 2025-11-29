@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{Datelike, TimeZone};
 use poise::{
+    CreateReply,
     serenity_prelude::{
         CreateAttachment, CreateComponent, CreateContainer, CreateMediaGallery,
         CreateMediaGalleryItem, CreateTextDisplay, CreateUnfurledMediaItem, Mentionable as _,
         MessageFlags, Timestamp, UserId,
     },
-    CreateReply,
 };
 
-use crate::config::{SPLASH_PING_ROLE, TY_CHANNEL};
-use crate::shared::{types::BingoKind, Context};
+use crate::config::TY_CHANNEL;
+use crate::shared::{Context, types::BingoKind};
 use crate::splashes::fetch;
 
 mod chart;
@@ -174,10 +174,8 @@ Hourly Average: **{hourly_average:.2}** splashes/h
 ### Individual Splashers:
 {splasher_list}\
 ### Go thank them in {} :heart:!
-||{}||
         ",
-        TY_CHANNEL.mention(),
-        SPLASH_PING_ROLE.mention()
+        TY_CHANNEL.mention()
     ));
 
     let chart_bytes =
