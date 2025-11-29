@@ -9,7 +9,7 @@ pub const DB_SCRIPTS_DIR: &str = "./data/scripts";
 pub const MENU_TIMEOUT_SECS: u64 = 180;
 
 // additional channel where hob list is logged when using `/hob send`
-pub const HOB_LOG_CHANNEL: GenericChannelId = GenericChannelId::new(1429152322189136024);
+pub const HOB_LOG_CHANNEL: GenericChannelId = GenericChannelId::new(1444459546750882033);
 // part of role request FAQ and help text
 pub const MANUAL_ROLE_CHANNEL: GenericChannelId = GenericChannelId::new(1014655654897664160);
 // used in splash list functionality for fetching messages
