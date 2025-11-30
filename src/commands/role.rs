@@ -94,8 +94,12 @@ Awarded for completing a bingo card without dying a single time
 
     let faq_row = CreateComponent::ActionRow(CreateActionRow::Buttons(vec![faq_button].into()));
 
+    let credit = CreateComponent::TextDisplay(CreateTextDisplay::new(
+        "-# made by <:bossflea:1213572347521536080>",
+    ));
+
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![title_section, text, faq_row]).accent_color(BLUE),
+        CreateContainer::new(vec![title_section, text, faq_row, credit]).accent_color(BLUE),
     );
 
     ctx.defer_ephemeral().await?;
