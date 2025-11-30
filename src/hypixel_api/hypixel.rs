@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use chrono::{DateTime, Datelike as _, Utc};
 use serde_json::Value;
 use tracing::warn;
@@ -188,9 +188,15 @@ pub async fn bingo_profile_data(
     let params = [("profile", profile_id)];
     let (json, _) = query_api(handle, "/v2/skyblock/profile", &params).await?;
 
-    let has_deaths: bool = json["profile"]["members"][uuid]["bestiary"]["deaths"]
+    let has_deaths: bool = json["profile"]["members"][uuid]["player_stats"]["deaths"]
         .as_object()
-        .map(|d| !d.is_empty())
+        .map(|d| {
+            d.keys().any(|k| {
+                !ALLOWED_DEATH_CAUSES.iter().any(|cause| {
+                    k == cause || (k.starts_with("master_") && &k["master_".len()..] == *cause)
+                })
+            })
+        })
         .unwrap_or(false);
 
     let bingo_rank: u8 = json["profile"]["members"][uuid]["pets_data"]["pets"]
@@ -272,3 +278,73 @@ pub async fn network_bingo_completions(
 
     Ok(seasonal_events)
 }
+
+const ALLOWED_DEATH_CAUSES: &[&str] = &[
+    "total", // total death count entry
+    "trap",
+    "diamond_guy",
+    "cellar_spider",
+    "crypt_dreadlord",
+    "crypt_lurker",
+    "crypt_souleater",
+    "lonely_spider",
+    "lost_adventurer",
+    "scared_skeleton",
+    "skeleton_grunt",
+    "sniper_skeleton",
+    "watcher",
+    "dungeon_respawning_skeleton",
+    "zombie_grunt",
+    "watcher_summon_undead",
+    "crypt_undead",
+    "skeleton_soldier",
+    "bonzo",
+    "bonzo_summon_undead",
+    "watcher_bonzo",
+    "skeleton_master",
+    "scarf",
+    "scarf_archer",
+    "scarf_mage",
+    "scarf_warrior",
+    "watcher_scarf",
+    "deathmite",
+    "king_midas",
+    "shadow_assassin",
+    "skeletor",
+    "zombie_knight",
+    "professor",
+    "professor_guardian_summon",
+    "professor_mage_guardian",
+    "professor_archer_guardian",
+    "professor_warrior_guardian",
+    "professor_priest_guardian",
+    "super_tank_zombie",
+    "zombie_soldier",
+    "spirit_miniboss",
+    "spirit_bat",
+    "spirit_bull",
+    "spirit_chicken",
+    "spirit_rabbit",
+    "spirit_sheep",
+    "spirit_wolf",
+    "livid",
+    "livid_clone",
+    "watcher_livid",
+    "tentaclees",
+    "mimic",
+    "skeletor_prime",
+    "super_archer",
+    "zombie_commander",
+    "crypt_witherskeleton",
+    "sadan_giant",
+    "sadan_golem",
+    "sadan_statue",
+    "skeleton_lord",
+    "wither_guard",
+    "wither_miner",
+    "zombie_lord",
+    "maxor",
+    "storm",
+    "goldor",
+    "necron",
+];
