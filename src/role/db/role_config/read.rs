@@ -168,12 +168,18 @@ impl DbRequest for BuildRoleDeltaCompletions {
 
         let completions_role = match completions_role {
             Some(role_mapping) => Some(BingoRole::Id(role_mapping.role)),
-            None => completions_template.map(|t| BingoRole::Name {
-                name: complete_completion_template(&t, completion_count),
-                kind: RoleMappingKind::Completions {
-                    count: completion_count,
-                },
-            }),
+            None => {
+                if completion_count == 0 {
+                    None
+                } else {
+                    completions_template.map(|t| BingoRole::Name {
+                        name: complete_completion_template(&t, completion_count),
+                        kind: RoleMappingKind::Completions {
+                            count: completion_count,
+                        },
+                    })
+                }
+            }
         };
 
         let specific_template = GetRolePatterns.execute(conn)?.specific_completion;

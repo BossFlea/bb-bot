@@ -312,6 +312,21 @@ async fn modal(
     let db = &ctx.data::<BotData>().db_handle;
 
     match action.next().unwrap_or_default() {
+        "jump_page_submit" => {
+            let values = shared_modal::JumpPage::validate(&interaction.data.components)?;
+
+            if values.page.is_empty() {
+                return Ok(MessageEdit::NoEdit);
+            };
+            let jump_page: usize = values.page.parse().unwrap_or(0);
+            session.state.page = jump_page.saturating_sub(1);
+
+            interaction
+                .create_response(ctx.http(), CreateInteractionResponse::Acknowledge)
+                .await?;
+            let menu = session.state.generate(db, session.menu_id).await?;
+            Ok(MessageEdit::Direct(menu))
+        }
         "role_patterns_submit" => {
             let values = modal::RolePatterns::validate(&interaction.data.components)?;
 

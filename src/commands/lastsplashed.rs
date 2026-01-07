@@ -168,8 +168,8 @@ fn est_start_of_month_relative(offset_months: i32) -> Timestamp {
         .with_ymd_and_hms(now.year(), now.month(), 1, 0, 0, 0)
         .unwrap();
     let offset_month = match offset_months.cmp(&0) {
-        Ordering::Less => start_of_month - chrono::Months::new(offset_months.abs() as u32),
-        Ordering::Greater => start_of_month + chrono::Months::new(offset_months.abs() as u32),
+        Ordering::Less => start_of_month - chrono::Months::new(offset_months.unsigned_abs()),
+        Ordering::Greater => start_of_month + chrono::Months::new(offset_months.unsigned_abs()),
         Ordering::Equal => start_of_month,
     };
     Timestamp::from_unix_timestamp(offset_month.timestamp()).unwrap()
