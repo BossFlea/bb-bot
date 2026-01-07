@@ -61,6 +61,7 @@ async fn main() -> Result<()> {
         commands::lastsplashed::lastsplashed(),
         commands::register::register(),
         commands::register::unregister(),
+        commands::baninfo::baninfo(),
     ];
     // Set default permission to `MANAGE_GUILD`, as bots cannot access endpoint for role-based
     // permission override (manual configuration intended)
