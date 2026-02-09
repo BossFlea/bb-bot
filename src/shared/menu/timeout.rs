@@ -2,14 +2,15 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use poise::serenity_prelude::{
-    async_trait, small_fixed_array::FixedArray, ActionRow, ActionRowComponent, Button, ButtonKind,
-    Component, ComponentType, Container, CreateActionRow, CreateButton, CreateComponent,
-    CreateContainer, CreateFile, CreateInputText, CreateMediaGallery, CreateMediaGalleryItem,
-    CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateSelectMenu,
-    CreateSelectMenuKind, CreateSelectMenuOption, CreateSeparator, CreateTextDisplay,
-    CreateThumbnail, CreateUnfurledMediaItem, FileComponent, GenericChannelId, Http, InputText,
-    MediaGallery, MediaGalleryItem, MessageId, Section, SelectMenu, SelectMenuOption, Separator,
-    SeparatorSpacingSize, Spacing, TextDisplay, Thumbnail, UnfurledMediaItem,
+    ActionRow, ActionRowComponent, Button, ButtonKind, Component, ComponentType, Container,
+    ContainerComponent, CreateActionRow, CreateButton, CreateComponent, CreateContainer,
+    CreateContainerComponent, CreateFile, CreateInputText, CreateMediaGallery,
+    CreateMediaGalleryItem, CreateSection, CreateSectionAccessory, CreateSectionComponent,
+    CreateSelectMenu, CreateSelectMenuKind, CreateSelectMenuOption, CreateSeparator,
+    CreateTextDisplay, CreateThumbnail, CreateUnfurledMediaItem, FileComponent, GenericChannelId,
+    Http, InputText, MediaGallery, MediaGalleryItem, MessageId, Section, SectionAccessory,
+    SectionComponent, SelectMenu, SelectMenuOption, Separator, SeparatorSpacingSize, Spacing,
+    TextDisplay, Thumbnail, UnfurledMediaItem, async_trait, small_fixed_array::FixedArray,
 };
 use tokio::{
     select,
@@ -24,26 +25,40 @@ pub trait Expirable: Send + Sync + 'static {
     async fn invalidate<'a>(&'a self, http: Arc<Http>) -> Result<&'a str>;
 
     fn disable_components(components: &mut FixedArray<Component>) {
-        components.iter_mut().for_each(|c| match c {
-            Component::ActionRow(action_row) => {
-                for component in &mut action_row.components {
-                    match component {
-                        ActionRowComponent::Button(button) => button.disabled = true,
-                        ActionRowComponent::SelectMenu(select_menu) => select_menu.disabled = true,
-                        _ => (),
+        for c in components {
+            match c {
+                Component::ActionRow(action_row) => disable_action_row(action_row),
+                Component::Section(section) => disable_section(section),
+                Component::Container(container) => {
+                    for cc in &mut container.components {
+                        match cc {
+                            ContainerComponent::ActionRow(action_row) => {
+                                disable_action_row(action_row)
+                            }
+                            ContainerComponent::Section(section) => disable_section(section),
+                            _ => (),
+                        }
                     }
                 }
+                _ => (),
             }
-            Component::Button(button) => button.disabled = true,
-            Component::SelectMenu(select_menu) => select_menu.disabled = true,
-            Component::Section(section) => {
-                if let Component::Button(button) = &mut *section.accessory {
-                    button.disabled = true
-                }
-            }
-            Component::Container(container) => Self::disable_components(&mut container.components),
+        }
+    }
+}
+
+fn disable_action_row(action_row: &mut ActionRow) {
+    for component in &mut action_row.components {
+        match component {
+            ActionRowComponent::Button(button) => button.disabled = true,
+            ActionRowComponent::SelectMenu(select_menu) => select_menu.disabled = true,
             _ => (),
-        });
+        }
+    }
+}
+
+fn disable_section(section: &mut Section) {
+    if let SectionAccessory::Button(button) = &mut *section.accessory {
+        button.disabled = true
     }
 }
 
@@ -107,6 +122,34 @@ impl IntoCreate for Component {
     }
 }
 
+impl IntoCreate for ContainerComponent {
+    type Builder = CreateContainerComponent<'static>;
+
+    fn into_create(self) -> Self::Builder {
+        match self {
+            ContainerComponent::ActionRow(action_row) => {
+                CreateContainerComponent::ActionRow(action_row.into_create())
+            }
+            ContainerComponent::Section(section) => {
+                CreateContainerComponent::Section(section.into_create())
+            }
+            ContainerComponent::TextDisplay(text_display) => {
+                CreateContainerComponent::TextDisplay(text_display.into_create())
+            }
+            ContainerComponent::MediaGallery(media_gallery) => {
+                CreateContainerComponent::MediaGallery(media_gallery.into_create())
+            }
+            ContainerComponent::Separator(separator) => {
+                CreateContainerComponent::Separator(separator.into_create())
+            }
+            ContainerComponent::File(file_component) => {
+                CreateContainerComponent::File(file_component.into_create())
+            }
+            _ => unreachable!("Invalid container component"),
+        }
+    }
+}
+
 impl IntoCreate for ActionRow {
     type Builder = CreateActionRow<'static>;
 
@@ -127,9 +170,6 @@ impl IntoCreate for ActionRow {
                 }
                 ActionRowComponent::SelectMenu(select_menu) => {
                     CreateActionRow::SelectMenu(select_menu.into_create())
-                }
-                ActionRowComponent::InputText(input_text) => {
-                    CreateActionRow::InputText(input_text.into_create())
                 }
                 _ => panic!("Unknown component"),
             },
@@ -224,10 +264,7 @@ impl IntoCreate for InputText {
         let style = self
             .style
             .expect("style should always be present on InputText");
-        let label = self
-            .label
-            .expect("label should always be present on InputText");
-        let mut builder = CreateInputText::new(style, self.custom_id).label(label);
+        let mut builder = CreateInputText::new(style, self.custom_id);
         if let Some(min_length) = self.min_length {
             builder = builder.min_length(min_length)
         }
@@ -252,15 +289,17 @@ impl IntoCreate for Section {
             .components
             .into_iter()
             .map(|c| match c {
-                Component::TextDisplay(text_display) => {
+                SectionComponent::TextDisplay(text_display) => {
                     CreateSectionComponent::TextDisplay(text_display.into_create())
                 }
                 _ => unreachable!("Invalid Section sub-component"),
             })
             .collect();
         let accessory = match *self.accessory {
-            Component::Button(button) => CreateSectionAccessory::Button(button.into_create()),
-            Component::Thumbnail(thumbnail) => {
+            SectionAccessory::Button(button) => {
+                CreateSectionAccessory::Button(button.into_create())
+            }
+            SectionAccessory::Thumbnail(thumbnail) => {
                 CreateSectionAccessory::Thumbnail(thumbnail.into_create())
             }
             _ => unreachable!("Invalid Section accessory"),
@@ -369,7 +408,7 @@ impl IntoCreate for Container {
         let components: Vec<_> = self
             .components
             .into_iter()
-            .map(Component::into_create)
+            .map(ContainerComponent::into_create)
             .collect();
 
         let mut builder = CreateContainer::new(components);

@@ -1,6 +1,7 @@
 use poise::serenity_prelude::{
-    ButtonStyle, CreateActionRow, CreateButton, CreateComponent, CreateContainer, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateSeparator, CreateTextDisplay,
+    ButtonStyle, CreateActionRow, CreateButton, CreateComponent, CreateContainer,
+    CreateContainerComponent, CreateSection, CreateSectionAccessory, CreateSectionComponent,
+    CreateSeparator, CreateTextDisplay,
 };
 
 use crate::hob::types::{HobEntry, OngoingSubentry};
@@ -27,13 +28,14 @@ pub fn generate_entry(menu_id: u64, hob_entry: HobEntry, page: &mut usize) -> Me
         .label("Preview")
         .style(ButtonStyle::Secondary);
 
-    let title_section = CreateComponent::Section(CreateSection::new(vec![title], delete_button));
+    let title_section =
+        CreateContainerComponent::Section(CreateSection::new(vec![title], delete_button));
 
-    let edit_row = CreateComponent::ActionRow(CreateActionRow::Buttons(
+    let edit_row = CreateContainerComponent::ActionRow(CreateActionRow::Buttons(
         vec![edit_button, preview_button].into(),
     ));
 
-    let divider = CreateComponent::Separator(CreateSeparator::new(true));
+    let divider = CreateContainerComponent::Separator(CreateSeparator::new(true));
 
     let components = match hob_entry {
         HobEntry::OneOff {
@@ -43,21 +45,22 @@ pub fn generate_entry(menu_id: u64, hob_entry: HobEntry, page: &mut usize) -> Me
             players,
             ..
         } => {
-            let description = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
-                "
+            let description =
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "
 ### Type\nOne-off achievement
 ### Title\n{}
 ### Players\n{}
 ### Bingo\n{}
 ### Comment\n{}
 ",
-                title,
-                players.to_list(),
-                bingo,
-                comment
-                    .filter(|s| !s.is_empty())
-                    .unwrap_or("*None*".to_string())
-            )));
+                    title,
+                    players.to_list(),
+                    bingo,
+                    comment
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or("*None*".to_string())
+                )));
 
             let navigation_row = navigation::nagivation_back(&id_prefix);
 
@@ -79,17 +82,18 @@ pub fn generate_entry(menu_id: u64, hob_entry: HobEntry, page: &mut usize) -> Me
             *page = page_chunk.page;
             let subentries_paginated = &subentries[page_chunk.range.clone()];
 
-            let description = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
-                "
+            let description =
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
+                    "
 ### Type\nIterative achievement
 ### Title\n{}
 ### Comment\n{}
 ",
-                title,
-                comment
-                    .filter(|s| !s.is_empty())
-                    .unwrap_or("*None*".to_string()),
-            )));
+                    title,
+                    comment
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or("*None*".to_string()),
+                )));
 
             let subentry_text =
                 CreateSectionComponent::TextDisplay(CreateTextDisplay::new(format!(
@@ -105,8 +109,10 @@ pub fn generate_entry(menu_id: u64, hob_entry: HobEntry, page: &mut usize) -> Me
                     .label("Create Subentry")
                     .style(ButtonStyle::Success),
             );
-            let subentry_section =
-                CreateComponent::Section(CreateSection::new(vec![subentry_text], create_button));
+            let subentry_section = CreateContainerComponent::Section(CreateSection::new(
+                vec![subentry_text],
+                create_button,
+            ));
 
             let subentries = subentries_paginated
                 .iter()
@@ -152,15 +158,16 @@ pub fn generate_subentry(menu_id: u64, subentry: OngoingSubentry) -> MenuMessage
         .label("Preview")
         .style(ButtonStyle::Secondary);
 
-    let title_section = CreateComponent::Section(CreateSection::new(vec![title], delete_button));
+    let title_section =
+        CreateContainerComponent::Section(CreateSection::new(vec![title], delete_button));
 
-    let edit_row = CreateComponent::ActionRow(CreateActionRow::Buttons(
+    let edit_row = CreateContainerComponent::ActionRow(CreateActionRow::Buttons(
         vec![edit_button, preview_button].into(),
     ));
 
-    let divider = CreateComponent::Separator(CreateSeparator::new(true));
+    let divider = CreateContainerComponent::Separator(CreateSeparator::new(true));
 
-    let description = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+    let description = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
         "
 ### Type\nOne-off achievement
 ### Player\n`{}`

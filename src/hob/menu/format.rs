@@ -2,7 +2,8 @@ use std::fmt::Write as _;
 
 use anyhow::{Result, bail};
 use poise::serenity_prelude::{
-    CreateComponent, CreateContainer, CreateSeparator, CreateTextDisplay, Timestamp,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateSeparator, CreateTextDisplay,
+    Timestamp,
 };
 
 use crate::hob::types::HobEntry;
@@ -30,14 +31,15 @@ pub fn build_hob_messages(
         .collect();
 
     entry_texts.push((
-        CreateComponent::TextDisplay(CreateTextDisplay::new(footer)),
+        CreateContainerComponent::TextDisplay(CreateTextDisplay::new(footer)),
         footer_length,
     ));
 
     let mut containers: Vec<CreateContainer> = Vec::new();
-    let mut current_container: Vec<CreateComponent> = vec![CreateComponent::TextDisplay(
-        CreateTextDisplay::new(TITLE_TEXT),
-    )];
+    let mut current_container: Vec<CreateContainerComponent> =
+        vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(TITLE_TEXT),
+        )];
     let mut current_container_chars = TITLE_TEXT.len();
 
     for (text_display, length) in entry_texts {
@@ -61,7 +63,9 @@ pub fn build_hob_messages(
         }
 
         if !current_container.is_empty() {
-            current_container.push(CreateComponent::Separator(CreateSeparator::new(true)));
+            current_container.push(CreateContainerComponent::Separator(CreateSeparator::new(
+                true,
+            )));
         }
         current_container.push(text_display);
     }

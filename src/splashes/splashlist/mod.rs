@@ -5,9 +5,9 @@ use chrono::{Datelike, TimeZone};
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateAttachment, CreateComponent, CreateContainer, CreateMediaGallery,
-        CreateMediaGalleryItem, CreateTextDisplay, CreateUnfurledMediaItem, Mentionable as _,
-        MessageFlags, Timestamp, UserId,
+        CreateAttachment, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateMediaGallery, CreateMediaGalleryItem, CreateTextDisplay, CreateUnfurledMediaItem,
+        Mentionable as _, MessageFlags, Timestamp, UserId,
     },
 };
 
@@ -187,13 +187,13 @@ Hourly Average: **{hourly_average:.2}** splashes/h
         .flags(MessageFlags::IS_COMPONENTS_V2)
         .components(vec![CreateComponent::Container(CreateContainer::new(
             vec![
-                CreateComponent::TextDisplay(text_overview),
-                CreateComponent::MediaGallery(CreateMediaGallery::new(vec![
+                CreateContainerComponent::TextDisplay(text_overview),
+                CreateContainerComponent::MediaGallery(CreateMediaGallery::new(vec![
                     CreateMediaGalleryItem::new(CreateUnfurledMediaItem::new(
                         "attachment://chart.png",
                     )),
                 ])),
-                CreateComponent::TextDisplay(individual_list),
+                CreateContainerComponent::TextDisplay(individual_list),
             ],
         ))])
         .attachment(chart_attachment))

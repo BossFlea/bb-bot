@@ -1,24 +1,24 @@
 use std::cmp::Ordering;
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use chrono::{Datelike as _, TimeZone as _};
 use poise::{
+    CreateReply,
     serenity_prelude::{
-        collector,
+        ChunkGuildFilter, CreateAllowedMentions, CreateComponent, CreateContainer,
+        CreateContainerComponent, CreateTextDisplay, Event, Mentionable as _, MessageFlags,
+        Timestamp, UserId, collector,
         colours::{
             branding::YELLOW,
             css::{DANGER, POSITIVE, WARNING},
         },
         futures::StreamExt,
-        ChunkGuildFilter, CreateAllowedMentions, CreateComponent, CreateContainer,
-        CreateTextDisplay, Event, Mentionable as _, MessageFlags, Timestamp, UserId,
     },
-    CreateReply,
 };
 
 use crate::config::SPLASHER_ROLE;
 use crate::error::UserError;
-use crate::shared::{menu::generate_id, Context};
+use crate::shared::{Context, menu::generate_id};
 use crate::splashes::lastsplashed;
 
 #[poise::command(
@@ -85,8 +85,8 @@ async fn lastsplashed_list(ctx: Context<'_>) -> Result<()> {
 
     let container_this =
         CreateComponent::Container(
-            CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                format!(
+            CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new(format!(
                     "## Most recent splashes
 Detected {} splashers.
 ### This month\n{}",
@@ -97,13 +97,13 @@ Detected {} splashers.
                             format!("- {}: <t:{}:D>\n", id.mention(), t.unix_timestamp())
                         ))
                         .collect::<String>(),
-                ),
-            ))])
+                )),
+            )])
             .accent_color(POSITIVE),
         );
     let container_last = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "### Last month\n{}",
                 last_splashes
                     .iter()
@@ -115,13 +115,13 @@ Detected {} splashers.
                         t.unix_timestamp()
                     )))
                     .collect::<String>(),
-            ),
-        ))])
+            )),
+        )])
         .accent_color(YELLOW),
     );
     let container_earlier = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "### Earlier\n{}",
                 last_splashes
                     .iter()
@@ -129,21 +129,21 @@ Detected {} splashers.
                         format!("- {}: <t:{}:D>\n", id.mention(), t.unix_timestamp())
                     ))
                     .collect::<String>(),
-            ),
-        ))])
+            )),
+        )])
         .accent_color(WARNING),
     );
     let container_unknown = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "### >6 months ago or never\n{}",
                 splashers
                     .iter()
                     .filter_map(|id| (!last_splashes.contains_key(id))
                         .then_some(format!("- {}\n", id.mention())))
                     .collect::<String>()
-            ),
-        ))])
+            )),
+        )])
         .accent_color(DANGER),
     );
 
@@ -201,7 +201,8 @@ async fn lastsplashed_get(ctx: Context<'_>, splasher: UserId) -> Result<()> {
     };
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(text)]).accent_color(POSITIVE),
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(text)])
+            .accent_color(POSITIVE),
     );
 
     let message = CreateReply::new()

@@ -2,8 +2,8 @@ use std::{cmp, ops::Range};
 
 use anyhow::Result;
 use poise::serenity_prelude::{
-    ButtonStyle, CreateActionRow, CreateButton, CreateComponent, ReactionType, async_trait,
-    small_fixed_array::FixedString,
+    ButtonStyle, CreateActionRow, CreateButton, CreateContainerComponent, ReactionType,
+    async_trait, small_fixed_array::FixedString,
 };
 
 use crate::{db::DbHandle, shared::menu::MenuMessage};
@@ -34,7 +34,7 @@ pub trait GenerateMenu {
 pub fn page_navigation_jump(
     id_prefix: &str,
     page_chunk: &PaginatedChunk,
-) -> CreateComponent<'static> {
+) -> CreateContainerComponent<'static> {
     let mut buttons = navigation_buttons_basic(id_prefix, page_chunk);
 
     let first_button = first_button(id_prefix, page_chunk.page == 0);
@@ -48,25 +48,25 @@ pub fn page_navigation_jump(
 
     buttons.push(jump_button);
 
-    CreateComponent::ActionRow(CreateActionRow::Buttons(buttons.into()))
+    CreateContainerComponent::ActionRow(CreateActionRow::Buttons(buttons.into()))
 }
 
 pub fn page_navigation_subentry(
     id_prefix: &str,
     page_chunk: &PaginatedChunk,
-) -> CreateComponent<'static> {
+) -> CreateContainerComponent<'static> {
     let mut buttons = navigation_buttons_basic(id_prefix, page_chunk);
 
     let back_button = back_button(id_prefix);
     buttons.insert(0, back_button);
 
-    CreateComponent::ActionRow(CreateActionRow::Buttons(buttons.into()))
+    CreateContainerComponent::ActionRow(CreateActionRow::Buttons(buttons.into()))
 }
 
-pub fn nagivation_back(id_prefix: &str) -> CreateComponent<'static> {
+pub fn nagivation_back(id_prefix: &str) -> CreateContainerComponent<'static> {
     let back_button = back_button(id_prefix);
 
-    CreateComponent::ActionRow(CreateActionRow::Buttons(vec![back_button].into()))
+    CreateContainerComponent::ActionRow(CreateActionRow::Buttons(vec![back_button].into()))
 }
 
 fn back_button(id_prefix: &str) -> CreateButton<'static> {

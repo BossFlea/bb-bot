@@ -2,9 +2,9 @@ use anyhow::{Context as _, Result, anyhow};
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateAllowedMentions, CreateComponent, CreateContainer, CreateSection,
-        CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, CreateThumbnail,
-        CreateUnfurledMediaItem, Mentionable as _, MessageFlags, User,
+        CreateAllowedMentions, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay,
+        CreateThumbnail, CreateUnfurledMediaItem, Mentionable as _, MessageFlags, User,
     },
 };
 
@@ -21,7 +21,7 @@ pub async fn baninfo(
         .guild_id()
         .context(UserError(anyhow!("Command invoked outside of a guild")))?;
 
-    let ban = guild.get_ban(ctx, user.id).await?;
+    let ban = guild.get_ban(ctx.http(), user.id).await?;
 
     let ban_details = if let Some(ban) = ban {
         if let Some(reason) = ban.reason {
@@ -45,17 +45,16 @@ User ID: `{}`
         ban_details
     );
 
-    let container =
-        CreateComponent::Container(CreateContainer::new(vec![CreateComponent::Section(
-            CreateSection::new(
-                vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
-                    info_text,
-                ))],
-                CreateSectionAccessory::Thumbnail(CreateThumbnail::new(
-                    CreateUnfurledMediaItem::new(user.face()),
-                )),
-            ),
-        )]));
+    let container = CreateComponent::Container(CreateContainer::new(vec![
+        CreateContainerComponent::Section(CreateSection::new(
+            vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
+                info_text,
+            ))],
+            CreateSectionAccessory::Thumbnail(CreateThumbnail::new(CreateUnfurledMediaItem::new(
+                user.face(),
+            ))),
+        )),
+    ]));
 
     ctx.send(
         CreateReply::new()

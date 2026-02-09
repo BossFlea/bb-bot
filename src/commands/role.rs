@@ -5,9 +5,9 @@ use poise::{
     CreateReply,
     serenity_prelude::{
         ButtonStyle, CreateActionRow, CreateButton, CreateComponent, CreateContainer,
-        CreateMessage, CreateSection, CreateSectionAccessory, CreateSectionComponent,
-        CreateTextDisplay, EditMessage, GenericChannelId, Member, Mentionable as _, Message,
-        MessageFlags, ReactionType, UserId,
+        CreateContainerComponent, CreateMessage, CreateSection, CreateSectionAccessory,
+        CreateSectionComponent, CreateTextDisplay, EditMessage, GenericChannelId, Member,
+        Mentionable as _, Message, MessageFlags, ReactionType, UserId,
         colours::{
             css::{POSITIVE, WARNING},
             roles::BLUE,
@@ -65,7 +65,7 @@ async fn send(
         .style(ButtonStyle::Secondary);
 
     // TODO: add additional unlink button here?
-    let text = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+    let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
         "Click the button to update your bingo-related roles.
 -# Note: If you've never done this before, you will be prompted to link your Hypixel profile.
 ### Bingo Rank role
@@ -85,16 +85,17 @@ Awarded for completing a bingo card without dying a single time
         MANUAL_ROLE_CHANNEL.mention()
     )));
 
-    let title_section = CreateComponent::Section(CreateSection::new(
+    let title_section = CreateContainerComponent::Section(CreateSection::new(
         vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
             "# Automated Role Requests",
         ))],
         CreateSectionAccessory::Button(begin_button),
     ));
 
-    let faq_row = CreateComponent::ActionRow(CreateActionRow::Buttons(vec![faq_button].into()));
+    let faq_row =
+        CreateContainerComponent::ActionRow(CreateActionRow::Buttons(vec![faq_button].into()));
 
-    let credit = CreateComponent::TextDisplay(CreateTextDisplay::new(
+    let credit = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
         "-# made by <:bossflea:1213572347521536080>",
     ));
 
@@ -134,13 +135,13 @@ Awarded for completing a bingo card without dying a single time
     }
 
     let reply_container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "## Sent Successfully
 The role requests message was successfully sent to {}.",
                 channel.mention()
-            ),
-        ))])
+            )),
+        )])
         .accent_color(POSITIVE),
     );
 
@@ -217,9 +218,9 @@ async fn network_bingo(
     let response = CreateReply::new()
         .flags(MessageFlags::IS_COMPONENTS_V2)
         .components(vec![CreateComponent::Container(
-            CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                format!("## Successfully Updated Status\n{message}"),
-            ))])
+            CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new(format!("## Successfully Updated Status\n{message}")),
+            )])
             .accent_colour(POSITIVE),
         )])
         .ephemeral(true);
@@ -292,13 +293,13 @@ async fn force_link(
         .await??;
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "## Linked Successfully
 Linked `{minecraft}` to {}, discarding any existing links for either account.",
                 discord.mention()
-            ),
-        ))])
+            )),
+        )])
         .accent_color(POSITIVE),
     );
 
@@ -334,13 +335,13 @@ async fn force_unlink(
         .await?;
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "## Unlinked Successfully
 Unlinked `{username}` from {}.",
                 user.mention()
-            ),
-        ))])
+            )),
+        )])
         .accent_color(POSITIVE),
     );
 
@@ -368,7 +369,7 @@ async fn query(
 
     let (discord, uuid, username) = match (discord, minecraft) {
         (None, None) => {
-            let text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                 "## Insufficient arguments
 You need to provide either the `discord` or `minecraft` command argument.",
             ));
@@ -395,7 +396,7 @@ You need to provide either the `discord` or `minecraft` command argument.",
                         user_id.mention()
                     );
                     let container = CreateComponent::Container(
-                        CreateContainer::new(vec![CreateComponent::TextDisplay(
+                        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                             CreateTextDisplay::new(text),
                         )])
                         .accent_color(WARNING),
@@ -448,9 +449,9 @@ You need to provide either the `discord` or `minecraft` command argument.",
             )
         }
     };
-    let link_text = CreateComponent::TextDisplay(CreateTextDisplay::new(link_message));
+    let link_text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(link_message));
 
-    let roles_text = CreateComponent::TextDisplay(
+    let roles_text = CreateContainerComponent::TextDisplay(
         request::player_roles(ctx.serenity_context(), &uuid)
             .await?
             .to_text_display(),

@@ -4,9 +4,9 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use either::Either;
 use poise::serenity_prelude::{
     CacheHttp as _, ComponentInteraction, ComponentInteractionDataKind, Context as SerenityContext,
-    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseFollowup,
-    CreateInteractionResponseMessage, CreateTextDisplay, GuildId, Mentionable as _, MessageFlags,
-    ModalInteraction, Role, RoleId,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateInteractionResponse,
+    CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateTextDisplay,
+    GuildId, Mentionable as _, MessageFlags, ModalInteraction, Role, RoleId,
     colours::css::{DANGER, POSITIVE},
 };
 use tracing::{info, warn};
@@ -74,13 +74,13 @@ pub async fn handle_interaction(
         );
 
         let container = CreateComponent::Container(
-            CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                format!(
+            CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new(format!(
                     "## You don't own this menu!
 Only {} is allowed to interact with this menu.",
                     session.owner.mention()
-                ),
-            ))])
+                )),
+            )])
             .accent_color(DANGER),
         );
 
@@ -169,8 +169,8 @@ async fn component(
             };
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!(
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
                         "## Successfully ran detection
 ### New detected roles
 {role_list}
@@ -181,8 +181,8 @@ Use the the configuration menu to manually assign them.
 -# - For roles with incrementally increasing numbers (e.g. Blackout counts), \
 detection stops after not finding a matching role for 3 consecutive numbers. \
 If such a gap is intentional, roles can still be configured manually."
-                    ),
-                ))])
+                    )),
+                )])
                 .accent_color(POSITIVE),
             );
 
@@ -340,14 +340,15 @@ async fn modal(
             })
             .await??;
 
-            let container =
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new(
                     "## Successfully Updated Patterns
 Set auto-detection patterns successfully. \
 Use the `Detect Roles` button in the configuration menu \
 to run the detection process using the new patterns.",
-                ))])
-                .accent_colour(POSITIVE);
+                ),
+            )])
+            .accent_colour(POSITIVE);
 
             interaction
                 .create_response(
@@ -386,7 +387,7 @@ to run the detection process using the new patterns.",
             })
             .await??;
 
-            let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+            let container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
                     "## Successfully Added Role Binding
 Associated {} with Bingo Rank {rank}.",
@@ -433,7 +434,7 @@ Associated {} with Bingo Rank {rank}.",
             })
             .await??;
 
-            let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+            let container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
                     "## Successfully Added Role Binding
 Associated {} with Blackout count {count}.",
@@ -495,7 +496,7 @@ Associated {} with Blackout count {count}.",
             })
             .await??;
 
-            let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+            let container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
                     "## Successfully Added Role Binding
 Associated {} with {bingo}.",
@@ -538,7 +539,7 @@ Associated {} with {bingo}.",
             })
             .await??;
 
-            let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+            let container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
                     "## Successfully Added Role Binding
 Associated {} with Immortal.",
@@ -590,7 +591,7 @@ Associated {} with Immortal.",
             })
             .await??;
 
-            let container = CreateContainer::new(vec![CreateComponent::TextDisplay(
+            let container = CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                 CreateTextDisplay::new(format!(
                     "## Successfully Added Role Binding
 Associated {} with Network Bingo '{bingo}'.",

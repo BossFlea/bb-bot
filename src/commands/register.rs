@@ -2,8 +2,8 @@ use anyhow::{Context as _, Result, anyhow};
 use poise::{
     CreateReply, builtins,
     serenity_prelude::{
-        CreateComponent, CreateContainer, CreateTextDisplay, GuildId, MessageFlags,
-        colours::css::POSITIVE,
+        CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay, GuildId,
+        MessageFlags, colours::css::POSITIVE,
     },
 };
 use tracing::warn;
@@ -65,7 +65,7 @@ pub async fn register(ctx: Context<'_>) -> Result<()> {
         .collect::<Vec<_>>()
         .join("\n");
 
-    let text = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+    let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
         "## Registered successfully
 Successfully registered the following commands and their subcommands:\n{commands_list}
 Note: All commands are visible only to users with the `MANAGE_GUILD` permission by default. \
@@ -104,10 +104,12 @@ pub async fn unregister(
     guild.set_commands(ctx.http(), &[]).await?;
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            "## Unregistered Successfully
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(
+                "## Unregistered Successfully
 Unregistered this bot's commands from the current guild.",
-        ))])
+            ),
+        )])
         .accent_color(POSITIVE),
     );
 

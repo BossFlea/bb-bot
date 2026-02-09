@@ -1,9 +1,9 @@
 use anyhow::{Context as _, Result, anyhow};
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, ComponentInteraction, Context as SerenityContext, CreateButton,
-    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseMessage,
-    CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateSeparator,
-    CreateTextDisplay, MessageFlags, ModalInteraction,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateInteractionResponse,
+    CreateInteractionResponseMessage, CreateSection, CreateSectionAccessory,
+    CreateSectionComponent, CreateSeparator, CreateTextDisplay, MessageFlags, ModalInteraction,
     colours::css::{DANGER, POSITIVE},
 };
 
@@ -49,13 +49,14 @@ pub async fn handle_component(
                 })
                 .await??
                 .context("Invalid subentry ID")?;
-            let subentry_text =
-                CreateComponent::TextDisplay(CreateTextDisplay::new(subentry.to_list_item()));
-            let title = CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let subentry_text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                subentry.to_list_item(),
+            ));
+            let title = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                 "### *Isolated Subentry Preview*",
             ));
 
-            let divider = CreateComponent::Separator(CreateSeparator::new(true));
+            let divider = CreateContainerComponent::Separator(CreateSeparator::new(true));
 
             let container = CreateComponent::Container(
                 CreateContainer::new(vec![title, divider.clone(), subentry_text, divider])
@@ -98,7 +99,7 @@ pub async fn handle_component(
                 .label("Delete")
                 .style(ButtonStyle::Danger);
 
-            let confirm_section = CreateComponent::Section(CreateSection::new(
+            let confirm_section = CreateContainerComponent::Section(CreateSection::new(
                 vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
                     "## Confirm Deletion\nAre you sure you want to delete this subentry?",
                 ))],
@@ -126,7 +127,7 @@ pub async fn handle_component(
             })
             .await??;
 
-            let success_text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let success_text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                 "## Deleted Successfully\nThe subentry was successfully removed from the database.",
             ));
 

@@ -116,8 +116,8 @@ async fn main() -> Result<()> {
         .build();
 
     let mut client = ClientBuilder::new(token, intents)
-        .framework(framework)
-        .event_handler(Handler)
+        .framework(Box::new(framework))
+        .event_handler(Arc::new(Handler))
         .data(Arc::new(BotData {
             db_handle: DbHandle::new(db_tx),
             api_handle: ApiHandle::new(api_key),

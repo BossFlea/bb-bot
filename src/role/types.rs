@@ -2,9 +2,10 @@ use std::{collections::HashSet, fmt::Display};
 
 use anyhow::Result;
 use poise::serenity_prelude::{
-    ButtonStyle, CacheHttp as _, CreateButton, CreateComponent, CreateContainer, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, EditMember, Http, Member,
-    Mentionable as _, Permissions, Role, RoleId, UserId,
+    ButtonStyle, CacheHttp as _, CreateButton, CreateComponent, CreateContainer,
+    CreateContainerComponent, CreateSection, CreateSectionAccessory, CreateSectionComponent,
+    CreateTextDisplay, EditMember, Http, Member, Mentionable as _, Permissions, Role, RoleId,
+    UserId,
     colours::css::{POSITIVE, WARNING},
 };
 
@@ -126,7 +127,7 @@ impl RoleMapping {
         format!("- {} – {}", self.role.mention(), self.kind)
     }
 
-    pub fn to_section_delete(self, id_prefix: &str) -> CreateComponent<'static> {
+    pub fn to_section_delete(self, id_prefix: &str) -> CreateContainerComponent<'static> {
         let text =
             CreateSectionComponent::TextDisplay(CreateTextDisplay::new(self.to_list_entry()));
         let delete_button = CreateSectionAccessory::Button(
@@ -134,7 +135,7 @@ impl RoleMapping {
                 .label("Delete")
                 .style(ButtonStyle::Danger),
         );
-        CreateComponent::Section(CreateSection::new(vec![text], delete_button))
+        CreateContainerComponent::Section(CreateSection::new(vec![text], delete_button))
     }
 }
 
@@ -261,7 +262,7 @@ impl LinkStatus {
     pub fn to_response(&self) -> CreateComponent<'static> {
         match self {
             LinkStatus::NoDiscord => {
-                let text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+                let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                     "## No Discord account found
 **Unable to find a linked Discord account in your Hypixel profile.**
 \nPlease check your username spelling and try again.
@@ -271,7 +272,7 @@ impl LinkStatus {
                 CreateComponent::Container(CreateContainer::new(vec![text]).accent_color(WARNING))
             }
             LinkStatus::DifferentDiscord { other_discord, .. } => {
-                let text = CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "## Wrong Discord account found
 **Your linked Discord account on Hypixel is currently set to: `{other_discord}`**
 \nPlease check your username spelling and try again.
@@ -291,7 +292,7 @@ impl LinkStatus {
                     .label("Unlink Account")
                     .style(ButtonStyle::Danger);
 
-                let section = CreateComponent::Section(CreateSection::new(
+                let section = CreateContainerComponent::Section(CreateSection::new(
                     vec![text],
                     CreateSectionAccessory::Button(unlink_button),
                 ));
@@ -319,7 +320,7 @@ impl LinkStatus {
                     .label("Unlink Account")
                     .style(ButtonStyle::Danger);
 
-                let section = CreateComponent::Section(CreateSection::new(
+                let section = CreateContainerComponent::Section(CreateSection::new(
                     vec![text],
                     CreateSectionAccessory::Button(unlink_button),
                 ));
@@ -339,7 +340,7 @@ Your Hypixel profile was successfully linked to this Discord account.
                     .label("Request Roles")
                     .style(ButtonStyle::Primary);
 
-                let section = CreateComponent::Section(CreateSection::new(
+                let section = CreateContainerComponent::Section(CreateSection::new(
                     vec![text],
                     CreateSectionAccessory::Button(continue_button),
                 ));

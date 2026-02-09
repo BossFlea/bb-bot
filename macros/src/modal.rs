@@ -389,7 +389,7 @@ fn generate_modal_code(modal_def: ModalDefinition) -> Result<TokenStream2> {
                     .components(components)
             }
 
-            pub fn validate<'a>(components: &[::poise::serenity_prelude::Component]) -> ::anyhow::Result<#validated_name> {
+            pub fn validate<'a>(components: &[::poise::serenity_prelude::ModalComponent]) -> ::anyhow::Result<#validated_name> {
                 #validation_logic
             }
         }
@@ -432,7 +432,7 @@ fn generate_validated_fields(components: &[ModalComponent]) -> Vec<TokenStream2>
                     let kind_variant = extract_select_kind_variant(&select.kind);
 
                     let field_type = match kind_variant {
-                        SelectKindVariant::String => quote! { ::poise::serenity_prelude::small_fixed_array::FixedArray<::poise::serenity_prelude::small_fixed_array::FixedString> },
+                        SelectKindVariant::String => quote! { ::poise::serenity_prelude::small_fixed_array::FixedArray<String> },
                         SelectKindVariant::User => quote! { ::poise::serenity_prelude::small_fixed_array::FixedArray<::poise::serenity_prelude::UserId> },
                         SelectKindVariant::Role => quote! { ::poise::serenity_prelude::small_fixed_array::FixedArray<::poise::serenity_prelude::RoleId> },
                         SelectKindVariant::Mentionable => quote! { ::poise::serenity_prelude::small_fixed_array::FixedArray<::poise::serenity_prelude::GenericId> },
@@ -494,9 +494,9 @@ fn generate_create_components(components: &[ModalComponent], prefill: bool) -> V
                 }
 
                 let mut label_builder = quote! {
-                        ::poise::serenity_prelude::CreateLabel::new(
+                        ::poise::serenity_prelude::CreateLabel::input_text(
                             #label,
-                            ::poise::serenity_prelude::CreateLabelComponent::InputText(#input_builder)
+                            #input_builder,
                         )
                 };
 
@@ -508,7 +508,7 @@ fn generate_create_components(components: &[ModalComponent], prefill: bool) -> V
 
                 quote! {
                     components.push(
-                        ::poise::serenity_prelude::CreateComponent::Label(#label_builder)
+                        ::poise::serenity_prelude::CreateModalComponent::Label(#label_builder)
                     );
                 }
             }
@@ -547,9 +547,9 @@ fn generate_create_components(components: &[ModalComponent], prefill: bool) -> V
                 }
 
                 let mut label_builder = quote! {
-                        ::poise::serenity_prelude::CreateLabel::new(
+                        ::poise::serenity_prelude::CreateLabel::select_menu(
                             #label,
-                            ::poise::serenity_prelude::CreateLabelComponent::SelectMenu(#select_builder)
+                            #select_builder,
                         )
                 };
 
@@ -561,7 +561,7 @@ fn generate_create_components(components: &[ModalComponent], prefill: bool) -> V
 
                 quote! {
                     components.push(
-                        ::poise::serenity_prelude::CreateComponent::Label(#label_builder)
+                        ::poise::serenity_prelude::CreateModalComponent::Label(#label_builder)
                     );
                 }
             }
@@ -574,7 +574,7 @@ fn generate_create_components(components: &[ModalComponent], prefill: bool) -> V
 
                 quote! {
                     components.push(
-                        ::poise::serenity_prelude::CreateComponent::TextDisplay(#text_builder)
+                        ::poise::serenity_prelude::CreateModalComponent::TextDisplay(#text_builder)
                     );
                 }
             }
@@ -597,7 +597,7 @@ fn generate_validation_logic(
                         let mut found_value = None;
 
                         for component in components {
-                            if let ::poise::serenity_prelude::Component::Label(::poise::serenity_prelude::Label {
+                            if let ::poise::serenity_prelude::ModalComponent::Label(::poise::serenity_prelude::Label {
                                 component: ::poise::serenity_prelude::LabelComponent::InputText(input),
                                 ..
                             }) = &component {
@@ -618,44 +618,49 @@ fn generate_validation_logic(
                 let field_name_str = field_name.to_string();
                 let kind_variant = extract_select_kind_variant(&select.kind);
 
+                // TODO: values no longer parsed by serenity, always FixedArray<String> -> individual parsing required
                 let extraction_logic = match kind_variant {
                     SelectKindVariant::String => quote! {
-                        if let ::poise::serenity_prelude::SelectMenuValues::String(values) = select_values {
-                            values
-                        } else {
-                            return Err(::anyhow::anyhow!("Expected String select menu values for field: {}", #field_name_str));
-                        }
+                        select_values
                     },
                     SelectKindVariant::User => quote! {
-                        if let ::poise::serenity_prelude::SelectMenuValues::User(values) = select_values {
-                            values
-                        } else {
-                            return Err(::anyhow::anyhow!("Expected User select menu values for field: {}", #field_name_str));
-                        }
+                        select_values
+                            .iter()
+                            .map(|id| id.parse().map(::poise::serenity_prelude::UserId::new))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(
+                                |_| ::anyhow::anyhow!("Expected User select menu values for field: {}", #field_name_str),
+                            )
                     },
                     SelectKindVariant::Role => quote! {
-                        if let ::poise::serenity_prelude::SelectMenuValues::Role(values) = select_values {
-                            values
-                        } else {
-                            return Err(::anyhow::anyhow!("Expected Role select menu values for field: {}", #field_name_str));
-                        }
+                        select_values
+                            .iter()
+                            .map(|id| id.parse().map(::poise::serenity_prelude::RoleId::new))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(
+                                |_| ::anyhow::anyhow!("Expected Role select menu values for field: {}", #field_name_str),
+                            )
                     },
                     SelectKindVariant::Mentionable => quote! {
-                        if let ::poise::serenity_prelude::SelectMenuValues::Mentionable(values) = select_values {
-                            values
-                        } else {
-                            return Err(::anyhow::anyhow!("Expected Mentionable select menu values for field: {}", #field_name_str));
-                        }
+                        select_values
+                            .iter()
+                            .map(|id| id.parse().map(::poise::serenity_prelude::GenericId::new))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(
+                                |_| ::anyhow::anyhow!("Expected Mentionable select menu values for field: {}", #field_name_str),
+                            )
                     },
                     SelectKindVariant::Channel => quote! {
-                        if let ::poise::serenity_prelude::SelectMenuValues::Channel(values) = select_values {
-                            values
-                        } else {
-                            return Err(::anyhow::anyhow!("Expected Channel select menu values for field: {}", #field_name_str));
-                        }
+                        select_values
+                            .iter()
+                            .map(|id| id.parse().map(::poise::serenity_prelude::GenericChannelId::new))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(
+                                |_| ::anyhow::anyhow!("Expected Channel select menu values for field: {}", #field_name_str),
+                            )
                     },
                     SelectKindVariant::Unknown => quote! {
-                        select_values // fallback to enum
+                        select_values // fallback to raw strings
                     },
                 };
 
@@ -664,7 +669,7 @@ fn generate_validation_logic(
                         let mut found_value = None;
 
                         for component in components {
-                            if let ::poise::serenity_prelude::Component::Label(::poise::serenity_prelude::Label {
+                            if let ::poise::serenity_prelude::ModalComponent::Label(::poise::serenity_prelude::Label {
                                 component: ::poise::serenity_prelude::LabelComponent::SelectMenu(select),
                                 ..
                             }) = &component {
@@ -676,7 +681,6 @@ fn generate_validation_logic(
                         }
 
                         let select_values = found_value
-                            .flatten()
                             .ok_or_else(|| ::anyhow::anyhow!("Invalid modal data: Missing select field: {}", #field_name_str))?;
 
                         #extraction_logic

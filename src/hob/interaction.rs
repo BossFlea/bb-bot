@@ -1,18 +1,19 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use either::Either;
 use poise::serenity_prelude::{
-    colours::css::DANGER, CacheHttp as _, ComponentInteraction, Context as SerenityContext,
-    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseMessage,
-    CreateTextDisplay, Mentionable as _, MessageFlags, ModalInteraction,
+    CacheHttp as _, ComponentInteraction, Context as SerenityContext, CreateComponent,
+    CreateContainer, CreateContainerComponent, CreateInteractionResponse,
+    CreateInteractionResponseMessage, CreateTextDisplay, Mentionable as _, MessageFlags,
+    ModalInteraction, colours::css::DANGER,
 };
 use tokio::sync::MutexGuard;
 use tracing::{info, warn};
 
 use crate::error::UserError;
 use crate::hob::menu::{HobEditSession, HobEditState};
-use crate::shared::{interaction::MessageEdit, menu::navigation::Backtrack as _, BotData};
+use crate::shared::{BotData, interaction::MessageEdit, menu::navigation::Backtrack as _};
 
 mod modal;
 mod select_entry;
@@ -66,13 +67,13 @@ pub async fn handle_interaction(
         );
 
         let container = CreateComponent::Container(
-            CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                format!(
+            CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new(format!(
                     "## You don't own this menu!
 Only {} is allowed to interact with this menu.",
                     session.owner.mention()
-                ),
-            ))])
+                )),
+            )])
             .accent_color(DANGER),
         );
 

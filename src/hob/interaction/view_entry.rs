@@ -1,9 +1,9 @@
 use anyhow::{Context as _, Result, anyhow};
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, ComponentInteraction, Context as SerenityContext, CreateButton,
-    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseMessage,
-    CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateSeparator,
-    CreateTextDisplay, MessageFlags, ModalInteraction,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateInteractionResponse,
+    CreateInteractionResponseMessage, CreateSection, CreateSectionAccessory,
+    CreateSectionComponent, CreateSeparator, CreateTextDisplay, MessageFlags, ModalInteraction,
     colours::css::{DANGER, POSITIVE},
     small_fixed_array::FixedString,
 };
@@ -59,10 +59,11 @@ pub async fn handle_component(
                 .await??
                 .context("Invalid entry ID")?;
             let entry_text = entry.to_text_display().0;
-            let title =
-                CreateComponent::TextDisplay(CreateTextDisplay::new("### *Single Entry Preview*"));
+            let title = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                "### *Single Entry Preview*",
+            ));
 
-            let divider = CreateComponent::Separator(CreateSeparator::new(true));
+            let divider = CreateContainerComponent::Separator(CreateSeparator::new(true));
             let container = CreateComponent::Container(
                 CreateContainer::new(vec![title, divider.clone(), entry_text, divider])
                     .accent_color(ACCENT_COLOR),
@@ -121,7 +122,7 @@ pub async fn handle_component(
                 .label("Delete")
                 .style(ButtonStyle::Danger);
 
-            let confirm_section = CreateComponent::Section(CreateSection::new(
+            let confirm_section = CreateContainerComponent::Section(CreateSection::new(
                 vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
                     "## Confirm Deletion\nAre you sure you want to delete this HoB entry?",
                 ))],
@@ -148,7 +149,7 @@ pub async fn handle_component(
             })
             .await??;
 
-            let success_text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let success_text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                 "## Deleted Successfully\nThe entry was successfully removed from the database.",
             ));
 

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::{Context as _, Result};
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, Context as SerenityContext, CreateButton, CreateComponent,
-    CreateContainer, CreateSection, CreateSectionAccessory, CreateSectionComponent,
-    CreateTextDisplay, Member, Mentionable as _, RoleId, User, UserId,
+    CreateContainer, CreateContainerComponent, CreateSection, CreateSectionAccessory,
+    CreateSectionComponent, CreateTextDisplay, Member, Mentionable as _, RoleId, User, UserId,
     colours::{branding::YELLOW, css::POSITIVE},
 };
 use tracing::warn;
@@ -125,7 +125,7 @@ impl RoleRequestStatus {
                         .join("\n")
                 };
 
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "## Roles Updated Successfully
 {user_mention} roles were updated successfully.
 ### Added
@@ -135,7 +135,7 @@ impl RoleRequestStatus {
                 )))
             }
             RoleRequestStatus::NoChanges { .. } => {
-                CreateComponent::TextDisplay(CreateTextDisplay::new(format!(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "## No Changes
 {user_mention} roles weren't modified.",
                 )))
@@ -143,8 +143,8 @@ impl RoleRequestStatus {
         };
 
         let stats_section = match other_user {
-            Some(_) => CreateComponent::TextDisplay(self.get_roles().to_text_display()),
-            None => CreateComponent::Section(CreateSection::new(
+            Some(_) => CreateContainerComponent::TextDisplay(self.get_roles().to_text_display()),
+            None => CreateContainerComponent::Section(CreateSection::new(
                 vec![CreateSectionComponent::TextDisplay(
                     self.get_roles().to_text_display(),
                 )],

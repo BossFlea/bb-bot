@@ -2,10 +2,10 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use either::Either;
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, ComponentInteraction, Context as SerenityContext, CreateButton,
-    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseFollowup,
-    CreateInteractionResponseMessage, CreateMediaGallery, CreateMediaGalleryItem, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, CreateUnfurledMediaItem,
-    Mentionable as _, MessageFlags, ModalInteraction,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateInteractionResponse,
+    CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateMediaGallery,
+    CreateMediaGalleryItem, CreateSection, CreateSectionAccessory, CreateSectionComponent,
+    CreateTextDisplay, CreateUnfurledMediaItem, Mentionable as _, MessageFlags, ModalInteraction,
     colours::{css::POSITIVE, roles::BLUE},
 };
 use tracing::info;
@@ -86,7 +86,7 @@ async fn component(
                     .map_or("".to_string(), |d| format!("#{}", d.get()));
                 let full_username = format!("{}{}", interaction.user.name, discriminator);
 
-                let instruction_text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+                let instruction_text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                     format!("# Link Accounts
 Your Discord account isn't currently linked to a Hypixel profile. Follow these steps to link your accounts:
 ### 1. Go to any Hypixel lobby in-game
@@ -98,7 +98,7 @@ Your Discord account isn't currently linked to a Hypixel profile. Follow these s
                     .emoji('🔗')
                     .label("Link Account")
                     .style(ButtonStyle::Success);
-                let button_section = CreateComponent::Section(CreateSection::new(
+                let button_section = CreateContainerComponent::Section(CreateSection::new(
                     vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
                         "### 4. Confirm username
 Once you've completed the steps above, \
@@ -108,7 +108,7 @@ click this button and enter your in-game username when prompted.",
                 ));
 
                 let instruction_image =
-                    CreateComponent::MediaGallery(CreateMediaGallery::new(vec![
+                    CreateContainerComponent::MediaGallery(CreateMediaGallery::new(vec![
                         CreateMediaGalleryItem::new(CreateUnfurledMediaItem::new(INSTRUCTIONS_GIF)),
                     ]));
 
@@ -157,7 +157,7 @@ click this button and enter your in-game username when prompted.",
                 }
             }
 
-            let text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                 "## Unlinked Successfully
 Your accounts were successfully unlinked. \
 You will be prompted to re-link the next time you request roles.",
@@ -181,7 +181,7 @@ You will be prompted to re-link the next time you request roles.",
             Ok(())
         }
         "faq" => {
-            let text = CreateComponent::TextDisplay(CreateTextDisplay::new(
+            let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                 format!("## Frequently asked Questions
 > ### My Bingo rank role isn't being updated.
 Bingo rank detection is based on your **bingo pet's rarity**. \

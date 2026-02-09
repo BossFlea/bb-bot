@@ -3,7 +3,7 @@ use poise::{
     BoxFuture, CreateReply, FrameworkError,
     serenity_prelude::{
         CacheHttp as _, Context as SerenityContext, CreateComponent, CreateContainer,
-        CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateContainerComponent, CreateInteractionResponse, CreateInteractionResponseFollowup,
         CreateInteractionResponseMessage, CreateTextDisplay, FullEvent, Interaction,
         Mentionable as _, MessageFlags,
         colours::css::{DANGER, WARNING},
@@ -35,22 +35,24 @@ pub fn deduplicate_error_chain(error: &mut Error) {
 
 fn internal_error_container(error: &Error) -> CreateComponent<'static> {
     CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "## Internal Error\n```\n{error:?}\n```
 Please report this to {}!",
                 BOT_MAINTAINER.mention()
-            ),
-        ))])
+            )),
+        )])
         .accent_color(DANGER),
     )
 }
 
 fn user_error_container(error: &Error) -> CreateComponent<'static> {
     CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!("## You seem to have made a mistake\n```\n{error:?}\n```"),
-        ))])
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
+                "## You seem to have made a mistake\n```\n{error:?}\n```"
+            )),
+        )])
         .accent_color(WARNING),
     )
 }
@@ -145,8 +147,8 @@ where
             let prefix = ctx.prefix();
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!(
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
                         "## Subcommand required
 You must specify one of the following subcommands:\n{}",
                         ctx.command()
@@ -157,8 +159,8 @@ You must specify one of the following subcommands:\n{}",
                             })
                             .collect::<Vec<_>>()
                             .join("\n"),
-                    ),
-                ))])
+                    )),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -186,16 +188,16 @@ You must specify one of the following subcommands:\n{}",
             }
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!(
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
                         "## Panicked
 A critical error occurred and the command handler panicked!
 -# This should not affect the bot as a whole.\n
 Please report this to {}!
 ",
                         BOT_MAINTAINER.mention()
-                    ),
-                ))])
+                    )),
+                )])
                 .accent_color(DANGER),
             );
 
@@ -226,9 +228,9 @@ Please report this to {}!
             warn!(description);
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!("## Failed to parse argument\n{description}"),
-                ))])
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!("## Failed to parse argument\n{description}")),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -249,13 +251,13 @@ Please report this to {}!
                 ctx.command.qualified_name,
             );
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!(
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
                         "## Command structure mismatch\n```\n{description}\n```
 Try re-registering the bot's commands using '{} register'",
                         ctx.framework().bot_id().mention()
-                    ),
-                ))])
+                    )),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -275,13 +277,13 @@ Try re-registering the bot's commands using '{} register'",
         } => {
             warn!("User hit cooldown with {:?}", ctx.invocation_string());
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!(
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
                         "## Cooldown hit
 You must wait **~{} seconds** before you can use this command again.",
                         remaining_cooldown.as_secs()
-                    ),
-                ))])
+                    )),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -304,12 +306,12 @@ You must wait **~{} seconds** before you can use this command again.",
                 ctx.invocation_string()
             );
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!(
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!(
                         "## Lacking Bot Permissions
 The bot is missing the following permissions to execute this command: **{missing_permissions}**"
-                    ),
-                ))])
+                    )),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -344,9 +346,9 @@ The bot is missing the following permissions to execute this command: **{missing
             };
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    format!("## Lacking User Permissions\n{description}"),
-                ))])
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(format!("## Lacking User Permissions\n{description}")),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -368,7 +370,7 @@ The bot is missing the following permissions to execute this command: **{missing
             // Don't respond to prefix commands (e.g. `register`)
             if ctx.prefix() == "/" {
                 let container = CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
+                    CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                         CreateTextDisplay::new(
                             "Owner-only Command
 You must be an owner to use this command.",
@@ -394,10 +396,12 @@ You must be an owner to use this command.",
             );
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    "Server-only Command
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(
+                        "Server-only Command
 You cannot use this command outside of a server.",
-                ))])
+                    ),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -417,10 +421,12 @@ You cannot use this command outside of a server.",
             );
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    "DMs-only Command
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(
+                        "DMs-only Command
 You cannot use this command touside of DMs.",
-                ))])
+                    ),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -440,10 +446,12 @@ You cannot use this command touside of DMs.",
             );
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    "NSFW Command
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(
+                        "NSFW Command
 You cannot use this command outside of an NSFW channel.",
-                ))])
+                    ),
+                )])
                 .accent_color(WARNING),
             );
 
@@ -462,7 +470,7 @@ You cannot use this command outside of an NSFW channel.",
                 error!("Check errored for {:?}: {error:#}", ctx.invocation_string());
 
                 let container = CreateComponent::Container(
-                    CreateContainer::new(vec![CreateComponent::TextDisplay(
+                    CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
                         CreateTextDisplay::new("Failed to perform check\n```\n{error:?}\n```"),
                     )])
                     .accent_color(DANGER),
@@ -503,10 +511,12 @@ You cannot use this command outside of an NSFW channel.",
             error!("Failed to fetch permissions");
 
             let container = CreateComponent::Container(
-                CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    "# Failed to fetch permissions
+                CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new(
+                        "# Failed to fetch permissions
 Failed to fetch permissions for you or the bot.",
-                ))])
+                    ),
+                )])
                 .accent_color(DANGER),
             );
 

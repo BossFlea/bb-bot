@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use poise::serenity_prelude::{
-    Component, CreateComponent, CreateContainer, CreateTextDisplay, GenericChannelId, Http,
-    MessageId, User, async_trait,
+    Component, CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay,
+    GenericChannelId, Http, MessageId, User, async_trait,
 };
 use tokio::sync::Notify;
 
@@ -47,9 +47,9 @@ impl Expirable for RoleConfigSession {
             }
         }) {
             *container = std::mem::replace(container, CreateContainer::new(Vec::new()))
-                .add_component(CreateComponent::TextDisplay(CreateTextDisplay::new(
-                    "-# This menu has expired.",
-                )));
+                .add_component(CreateContainerComponent::TextDisplay(
+                    CreateTextDisplay::new("-# This menu has expired."),
+                ));
         }
 
         let menu = MenuMessage::new(component_builders);

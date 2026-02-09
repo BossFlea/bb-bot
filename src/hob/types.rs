@@ -1,5 +1,5 @@
 use poise::serenity_prelude::{
-    ButtonStyle, CreateButton, CreateComponent, CreateSection, CreateSectionAccessory,
+    ButtonStyle, CreateButton, CreateContainerComponent, CreateSection, CreateSectionAccessory,
     CreateSectionComponent, CreateTextDisplay,
 };
 
@@ -36,7 +36,7 @@ impl HobEntry {
         }
     }
 
-    pub fn to_section_edit(&self, id_prefix: &str) -> CreateComponent<'static> {
+    pub fn to_section_edit(&self, id_prefix: &str) -> CreateContainerComponent<'static> {
         match self {
             HobEntry::OneOff {
                 id,
@@ -55,7 +55,7 @@ impl HobEntry {
                     players.to_list()
                 )));
 
-                CreateComponent::Section(CreateSection::new(vec![text], edit_button))
+                CreateContainerComponent::Section(CreateSection::new(vec![text], edit_button))
             }
             HobEntry::Ongoing {
                 id,
@@ -83,12 +83,12 @@ impl HobEntry {
                     "###  {title}\n{description}"
                 )));
 
-                CreateComponent::Section(CreateSection::new(vec![text], edit_button))
+                CreateContainerComponent::Section(CreateSection::new(vec![text], edit_button))
             }
         }
     }
 
-    pub fn to_text_display(&self) -> (CreateComponent<'static>, usize) {
+    pub fn to_text_display(&self) -> (CreateContainerComponent<'static>, usize) {
         match self {
             HobEntry::OneOff {
                 title,
@@ -106,7 +106,7 @@ impl HobEntry {
                     players.to_list()
                 );
                 let length = text.len();
-                let component = CreateComponent::TextDisplay(CreateTextDisplay::new(text));
+                let component = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(text));
                 (component, length)
             }
             HobEntry::Ongoing {
@@ -130,7 +130,7 @@ impl HobEntry {
                 };
                 let text = format!("###  {title}\n{list}\n{comment}");
                 let length = text.len();
-                let component = CreateComponent::TextDisplay(CreateTextDisplay::new(text));
+                let component = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(text));
                 (component, length)
             }
         }
@@ -154,7 +154,7 @@ impl OngoingSubentry {
         )
     }
 
-    pub fn to_section(&self, id_prefix: &str) -> CreateComponent<'static> {
+    pub fn to_section(&self, id_prefix: &str) -> CreateContainerComponent<'static> {
         let text = CreateSectionComponent::TextDisplay(CreateTextDisplay::new(format!(
             "### `{}` – {}\nduring {}",
             self.player, self.value, self.bingo
@@ -165,7 +165,7 @@ impl OngoingSubentry {
                 .style(ButtonStyle::Primary),
         );
 
-        CreateComponent::Section(CreateSection::new(vec![text], button))
+        CreateContainerComponent::Section(CreateSection::new(vec![text], button))
     }
 }
 

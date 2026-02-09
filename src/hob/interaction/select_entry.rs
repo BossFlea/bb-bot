@@ -1,9 +1,10 @@
 use anyhow::{Context as _, Result, anyhow};
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, ComponentInteraction, Context as SerenityContext, CreateButton,
-    CreateComponent, CreateContainer, CreateInteractionResponse, CreateInteractionResponseMessage,
-    CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateTextDisplay, MessageFlags,
-    ModalInteraction, ReactionType, small_fixed_array::FixedString,
+    CreateComponent, CreateContainer, CreateContainerComponent, CreateInteractionResponse,
+    CreateInteractionResponseMessage, CreateSection, CreateSectionAccessory,
+    CreateSectionComponent, CreateTextDisplay, MessageFlags, ModalInteraction, ReactionType,
+    small_fixed_array::FixedString,
 };
 
 use crate::hob::{
@@ -97,21 +98,23 @@ Meant for achievements that can be improved upon (e.g. Highest XY).",
                 .label("Create Iterative Entry")
                 .style(ButtonStyle::Success);
 
-            let oneoff_section = CreateComponent::Section(CreateSection::new(
+            let oneoff_section = CreateContainerComponent::Section(CreateSection::new(
                 vec![oneoff_text],
                 CreateSectionAccessory::Button(oneoff_button),
             ));
 
-            let ongoing_section = CreateComponent::Section(CreateSection::new(
+            let ongoing_section = CreateContainerComponent::Section(CreateSection::new(
                 vec![ongoing_text],
                 CreateSectionAccessory::Button(ongoing_button),
             ));
 
             let container = CreateComponent::Container(CreateContainer::new(vec![
-                CreateComponent::TextDisplay(CreateTextDisplay::new("# Choose HoB Entry Type")),
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
+                    "# Choose HoB Entry Type",
+                )),
                 oneoff_section,
                 ongoing_section,
-                CreateComponent::TextDisplay(CreateTextDisplay::new(
+                CreateContainerComponent::TextDisplay(CreateTextDisplay::new(
                     "-# All entries can be edited after creation.",
                 )),
             ]));

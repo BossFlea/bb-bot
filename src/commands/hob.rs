@@ -4,8 +4,9 @@ use anyhow::Result;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateAttachment, CreateComponent, CreateContainer, CreateMessage, CreateTextDisplay,
-        GenericChannelId, Mentionable as _, MessageFlags, colours::css::POSITIVE,
+        CreateAttachment, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateMessage, CreateTextDisplay, GenericChannelId, Mentionable as _, MessageFlags,
+        colours::css::POSITIVE,
     },
 };
 use tokio::sync::{Mutex, Notify};
@@ -107,13 +108,13 @@ async fn send(
     }
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "## Sent Successfully
 The full HoB was sent to {} in the form of {message_count} messages.",
                 channel.mention()
-            ),
-        ))])
+            )),
+        )])
         .accent_color(POSITIVE),
     );
 

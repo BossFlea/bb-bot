@@ -1,7 +1,7 @@
 use poise::serenity_prelude::{
-    ButtonStyle, CreateActionRow, CreateButton, CreateComponent, CreateContainer, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateSelectMenu, CreateSelectMenuOption,
-    CreateSeparator, CreateTextDisplay,
+    ButtonStyle, CreateActionRow, CreateButton, CreateComponent, CreateContainer,
+    CreateContainerComponent, CreateSection, CreateSectionAccessory, CreateSectionComponent,
+    CreateSelectMenu, CreateSelectMenuOption, CreateSeparator, CreateTextDisplay,
 };
 
 use crate::role::types::RoleMappingKindRaw;
@@ -24,14 +24,14 @@ pub fn generate(
     session_state.page = chunk.page;
     let role_mappings_paginated = &role_mappings[chunk.range.clone()];
 
-    let divider = CreateComponent::Separator(CreateSeparator::new(true));
+    let divider = CreateContainerComponent::Separator(CreateSeparator::new(true));
 
     let role_components: Vec<_> = role_mappings_paginated
         .iter()
         .map(|r| r.to_section_delete(&id_prefix))
         .collect();
 
-    let title_section = CreateComponent::Section(CreateSection::new(
+    let title_section = CreateContainerComponent::Section(CreateSection::new(
         vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
             "# Configure Role Bindings",
         ))],
@@ -47,7 +47,7 @@ pub fn generate(
 \nSelect a category to view and manually edit associated roles.",
     ));
 
-    let description_section = CreateComponent::Section(CreateSection::new(
+    let description_section = CreateContainerComponent::Section(CreateSection::new(
         vec![description_text],
         CreateSectionAccessory::Button(
             CreateButton::new(format!("{id_prefix}:edit_patterns"))
@@ -69,7 +69,7 @@ pub fn generate(
             .default_selection(session_state.kind == RoleMappingKindRaw::Immortal),
     ];
 
-    let category_select = CreateComponent::ActionRow(CreateActionRow::SelectMenu(
+    let category_select = CreateContainerComponent::ActionRow(CreateActionRow::SelectMenu(
         CreateSelectMenu::new(
             format!("{id_prefix}:category"),
             poise::serenity_prelude::CreateSelectMenuKind::String {
@@ -85,7 +85,7 @@ pub fn generate(
         .label("Create Role Binding")
         .style(ButtonStyle::Success);
 
-    let category_section = CreateComponent::Section(CreateSection::new(
+    let category_section = CreateContainerComponent::Section(CreateSection::new(
         vec![CreateSectionComponent::TextDisplay(CreateTextDisplay::new(
             format!(
                 "Showing {}–{} of {} entries.",

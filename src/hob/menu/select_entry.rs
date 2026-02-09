@@ -1,6 +1,7 @@
 use poise::serenity_prelude::{
-    ButtonStyle, CreateButton, CreateComponent, CreateContainer, CreateSection,
-    CreateSectionAccessory, CreateSectionComponent, CreateSeparator, CreateTextDisplay,
+    ButtonStyle, CreateButton, CreateComponent, CreateContainer, CreateContainerComponent,
+    CreateSection, CreateSectionAccessory, CreateSectionComponent, CreateSeparator,
+    CreateTextDisplay,
 };
 
 use crate::hob::{menu::SelectEntryState, types::HobEntry};
@@ -22,7 +23,7 @@ pub fn generate_entry_list(
     session_state.page = chunk.page;
     let hob_entries_paginated = &hob_entries[chunk.range.clone()];
 
-    let divider = CreateComponent::Separator(CreateSeparator::new(true));
+    let divider = CreateContainerComponent::Separator(CreateSeparator::new(true));
 
     let entry_components: Vec<_> = hob_entries_paginated
         .iter()
@@ -52,7 +53,7 @@ pub fn generate_entry_list(
                     .label("Reset Search")
                     .style(ButtonStyle::Secondary),
             );
-            CreateComponent::Section(CreateSection::new(vec![title], reset_button))
+            CreateContainerComponent::Section(CreateSection::new(vec![title], reset_button))
         }
         None => {
             let title =
@@ -63,7 +64,7 @@ pub fn generate_entry_list(
                     .label("Search")
                     .style(ButtonStyle::Secondary),
             );
-            CreateComponent::Section(CreateSection::new(vec![title], search_button))
+            CreateContainerComponent::Section(CreateSection::new(vec![title], search_button))
         }
     };
 
@@ -73,7 +74,7 @@ pub fn generate_entry_list(
         .label("Create HoB Entry")
         .style(ButtonStyle::Success);
 
-    let showing_section = CreateComponent::Section(CreateSection::new(
+    let showing_section = CreateContainerComponent::Section(CreateSection::new(
         vec![showing],
         CreateSectionAccessory::Button(create_button),
     ));

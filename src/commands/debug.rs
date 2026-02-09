@@ -6,7 +6,7 @@ use poise::{
     ChoiceParameter, CreateReply,
     serenity_prelude::{
         AutocompleteChoice, CreateAutocompleteResponse, CreateComponent, CreateContainer,
-        CreateTextDisplay, MessageFlags,
+        CreateContainerComponent, CreateTextDisplay, MessageFlags,
         colours::css::{DANGER, POSITIVE},
     },
 };
@@ -64,9 +64,9 @@ async fn sql(
     let response = format!("## SQL Response\n{}", sql_data.to_formatted());
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            response,
-        ))])
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(response),
+        )])
         .accent_color(POSITIVE),
     );
 
@@ -96,10 +96,12 @@ async fn sql_script(
         );
 
         let container = CreateComponent::Container(
-            CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-                "## Invalid Script
+            CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+                CreateTextDisplay::new(
+                    "## Invalid Script
 Script path cannot contain `..`",
-            ))])
+                ),
+            )])
             .accent_color(DANGER),
         );
 
@@ -119,12 +121,12 @@ Script path cannot contain `..`",
     ctx.data().db_handle.request(RawBatch { sql }).await??;
 
     let container = CreateComponent::Container(
-        CreateContainer::new(vec![CreateComponent::TextDisplay(CreateTextDisplay::new(
-            format!(
+        CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
+            CreateTextDisplay::new(format!(
                 "## Script Executed Successfully
 The `{script}` SQL script executed without errors."
-            ),
-        ))])
+            )),
+        )])
         .accent_color(POSITIVE),
     );
 
