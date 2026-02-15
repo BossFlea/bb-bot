@@ -118,7 +118,7 @@ impl FetchSplashes {
         }
     }
 
-    fn is_splash(message: &Message) -> bool {
+    pub fn is_splash(message: &Message) -> bool {
         HUB_REGEX.is_match(&message.content)
             && message
                 .content

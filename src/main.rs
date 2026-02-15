@@ -16,6 +16,9 @@ use db::DbHandle;
 use hypixel_api::ApiHandle;
 use shared::BotData;
 
+use crate::config::SPLASHES_CHANNEL;
+use crate::splash_reminder::SplashReminderHandle;
+
 mod commands;
 mod config;
 mod db;
@@ -25,6 +28,7 @@ mod hypixel_api;
 mod log;
 mod role;
 mod shared;
+mod splash_reminder;
 mod splashes;
 
 fn get_env_var(name: &str) -> Result<String> {
@@ -60,6 +64,7 @@ async fn main() -> Result<()> {
         commands::splashlist::splashlist(),
         commands::lastsplashed::lastsplashed(),
         commands::register::register(),
+        commands::splashreminder::splashreminder(),
         commands::register::unregister(),
         commands::baninfo::baninfo(),
     ];
@@ -69,10 +74,12 @@ async fn main() -> Result<()> {
         cmd.default_member_permissions = Permissions::MANAGE_GUILD;
     }
 
-    // NOTE: `GUILD_MESSAGES` is only needed for the `register` prefix command. `MESSAGE_CONTENT`
-    // is required for the same reason, as well as for splash message fetching. `GUILD_MEMBERS` is
-    // needed to fetch all members with the splasher role.
+    // `GUILD_MESSAGES`: only for `register` prefix command
+    // `MESSAGE_CONTENT`: same reason, as well as for splash message fetching
+    // `GUILD_MEMBERS`: needed to fetch all members with the splasher role
+    // `GUILD_MESSAGE_REACTIONS`: necessary to detect reactions on splash messages
     let intents = GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::GUILD_MESSAGE_REACTIONS
         | GatewayIntents::MESSAGE_CONTENT
         | GatewayIntents::GUILD_MEMBERS;
 
@@ -123,6 +130,7 @@ async fn main() -> Result<()> {
             api_handle: ApiHandle::new(api_key),
             hob_sessions: Arc::new(Mutex::new(HashMap::new())),
             role_sessions: Arc::new(Mutex::new(HashMap::new())),
+            splash_reminder: Mutex::new(SplashReminderHandle::new()),
         }))
         .await?;
 
@@ -186,6 +194,20 @@ impl EventHandler for Handler {
                 }
                 _ => Ok(()),
             },
+            FullEvent::Message { new_message } => {
+                if new_message.channel_id == SPLASHES_CHANNEL {
+                    splash_reminder::event::splashes_message(ctx, new_message).await
+                } else {
+                    Ok(())
+                }
+            }
+            FullEvent::ReactionAdd { add_reaction, .. } => {
+                if add_reaction.channel_id == SPLASHES_CHANNEL {
+                    splash_reminder::event::splashes_reaction(ctx, add_reaction).await
+                } else {
+                    Ok(())
+                }
+            }
             _ => Ok(()),
         } {
             error::event_handler_error(err, ctx, event).await;

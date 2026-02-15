@@ -1,3 +1,4 @@
+use poise::serenity_prelude::EmojiId;
 use rusqlite::{Connection, Result, params};
 
 use crate::db::DbRequest;
@@ -97,6 +98,31 @@ impl DbRequest for RawBatch {
 
     fn execute(self, conn: &mut Connection) -> Self::ReturnValue {
         conn.execute_batch(&self.sql)?;
+        Ok(())
+    }
+}
+
+pub struct SetSplashReminder {
+    pub enabled: bool,
+    pub emoji: Option<EmojiId>,
+    pub emoji_count: Option<u32>,
+}
+impl DbRequest for SetSplashReminder {
+    type ReturnValue = Result<()>;
+
+    fn execute(self, conn: &mut Connection) -> Self::ReturnValue {
+        let emoji_id = self.emoji.map(EmojiId::get);
+        conn.execute(
+            "
+            INSERT INTO config_global (id, splash_reminder_enabled, splash_reminder_emoji_id, splash_reminder_emoji_count)
+            VALUES (1, ?1, ?2, ?3)
+            ON CONFLICT(id) DO UPDATE SET
+                splash_reminder_enabled = excluded.splash_reminder_enabled,
+                splash_reminder_emoji_id = excluded.splash_reminder_emoji_id,
+                splash_reminder_emoji_count = excluded.splash_reminder_emoji_count
+            ",
+            params![self.enabled, emoji_id, self.emoji_count],
+        )?;
         Ok(())
     }
 }

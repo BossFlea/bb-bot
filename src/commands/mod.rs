@@ -5,3 +5,4 @@ pub mod lastsplashed;
 pub mod register;
 pub mod role;
 pub mod splashlist;
+pub mod splashreminder;

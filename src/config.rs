@@ -18,6 +18,10 @@ pub const SPLASHES_CHANNEL: GenericChannelId = GenericChannelId::new(91607466997
 pub const SPLASH_PING_ROLE: RoleId = RoleId::new(916461777863180328);
 // used for last splashed functionality
 pub const SPLASHER_ROLE: RoleId = RoleId::new(916073464681603103);
+// role to ping for splash reminders
+pub const SPLASH_REMINDER_ROLE: RoleId = RoleId::new(1038620889278849044);
+// where to send `@Splash Needed` pings
+pub const SPLASH_REMINDER_CHANNEL: GenericChannelId = GenericChannelId::new(989395745134235669);
 // mentioned in splash list message
 pub const TY_CHANNEL: GenericChannelId = GenericChannelId::new(1006007462043852910);
 // part of error messages

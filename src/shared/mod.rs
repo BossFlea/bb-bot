@@ -7,6 +7,7 @@ use crate::db::DbHandle;
 use crate::hob::menu::HobEditSession;
 use crate::hypixel_api::ApiHandle;
 use crate::role::menu::RoleConfigSession;
+use crate::splash_reminder::SplashReminderHandle;
 
 pub mod db;
 pub mod interaction;
@@ -22,6 +23,7 @@ pub struct BotData {
     // struct in another reference-counting pointer
     pub hob_sessions: Arc<Mutex<HashMap<u64, Arc<Mutex<HobEditSession>>>>>,
     pub role_sessions: Arc<Mutex<HashMap<u64, Arc<Mutex<RoleConfigSession>>>>>,
+    pub splash_reminder: Mutex<SplashReminderHandle>,
 }
 
 pub type Context<'a> = poise::Context<'a, BotData, Error>;

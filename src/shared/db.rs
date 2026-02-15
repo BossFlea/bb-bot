@@ -25,6 +25,14 @@ pub fn initialise_tables(conn: &mut Connection) -> Result<()> {
             kind_specific_id INTEGER NOT NULL,
             UNIQUE(bingo_kind, kind_specific_id)
         );
+
+        -- Stores persistent configurable values
+        CREATE TABLE IF NOT EXISTS config_global (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            splash_reminder_enabled INTEGER CHECK (splash_reminder_enabled in (0, 1)),
+            splash_reminder_emoji_id INTEGER,
+            splash_reminder_emoji_count INTEGER
+        );
         ",
     )
 }

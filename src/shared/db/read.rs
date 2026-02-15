@@ -1,4 +1,5 @@
 use anyhow::{Context as _, anyhow, bail};
+use poise::serenity_prelude::EmojiId;
 use rusqlite::{Connection, OptionalExtension as _, Result, params, types::Value};
 
 use crate::db::DbRequest;
@@ -50,7 +51,6 @@ impl DbRequest for GetBingoData {
     }
 }
 
-#[allow(dead_code)]
 pub struct GetCurrentBingo;
 impl DbRequest for GetCurrentBingo {
     type ReturnValue = Result<Option<(Bingo, i64, i64)>>;
@@ -161,5 +161,32 @@ impl DbRequest for RawQueryReadonly {
         } else {
             Ok(SqlResponse::AffectedRows(statement.execute([])?))
         }
+    }
+}
+
+pub struct GetSplashReminder;
+impl DbRequest for GetSplashReminder {
+    type ReturnValue = Result<(bool, Option<EmojiId>, Option<u32>)>;
+
+    fn execute(self, conn: &mut Connection) -> Self::ReturnValue {
+        conn.query_one(
+            "
+            SELECT splash_reminder_enabled, splash_reminder_emoji_id, splash_reminder_emoji_count
+            FROM config_global WHERE id=1
+            ",
+            [],
+            |row| {
+                Ok((
+                    row.get::<_, bool>("splash_reminder_enabled")?,
+                    row.get::<_, Option<u64>>("splash_reminder_emoji_id")?,
+                    row.get::<_, Option<u32>>("splash_reminder_emoji_count")?,
+                ))
+            },
+        )
+        .optional()
+        .map(|opt| {
+            opt.map(|(e, id, count)| (e, id.map(EmojiId::new), count))
+                .unwrap_or((false, None, None))
+        })
     }
 }
