@@ -34,7 +34,7 @@ impl DbRequest for CachedCompletions {
         let (current_bingo, _, _) = GetCurrentBingo.execute(conn)?.unwrap_or_default();
 
         if let Some((updated_after, bingo_bytes)) = cached {
-            if current_bingo > updated_after {
+            if current_bingo.get_id() > updated_after {
                 // invalid, delete cache entry
                 conn.execute(
                     "
@@ -127,7 +127,7 @@ impl DbRequest for CachedBingoRank {
         let (current_bingo, _, _) = GetCurrentBingo.execute(conn)?.unwrap_or_default();
 
         if let Some((updated_after, rank)) = cached {
-            if current_bingo > updated_after {
+            if current_bingo.get_id() > updated_after {
                 // invalid, delete cache entry
                 conn.execute(
                     "
@@ -173,7 +173,7 @@ impl DbRequest for CachedImmortal {
         let (current_bingo, _, _) = GetCurrentBingo.execute(conn)?.unwrap_or_default();
 
         if let Some((updated_after, has_achieved)) = cached {
-            if current_bingo > updated_after && !has_achieved {
+            if current_bingo.get_id() > updated_after && !has_achieved {
                 // invalid, delete cache entry
                 conn.execute(
                     "

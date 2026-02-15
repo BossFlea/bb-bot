@@ -22,7 +22,7 @@ impl DbRequest for CacheCompletions {
             INSERT OR REPLACE INTO role_completions_cache (uuid, updated_after_bingo, bingo_set)
             VALUES (?1, ?2, ?3)
             ",
-            params![self.uuid, current_bingo, self.completions.data],
+            params![self.uuid, current_bingo.get_id(), self.completions.data],
         )?;
         Ok(())
     }
@@ -65,7 +65,7 @@ impl DbRequest for CacheBingoRank {
             INSERT OR REPLACE INTO role_bingo_rank_cache (uuid, updated_after_bingo, rank)
             VALUES (?1, ?2, ?3)
             ",
-            params![self.uuid, current_bingo, self.rank],
+            params![self.uuid, current_bingo.get_id(), self.rank],
         )?;
         Ok(())
     }
@@ -86,7 +86,7 @@ impl DbRequest for CacheImmortal {
             INSERT OR REPLACE INTO role_immortal_cache (uuid, updated_after_bingo, has_achieved)
             VALUES (?1, ?2, ?3)
             ",
-            params![self.uuid, current_bingo, self.has_achieved],
+            params![self.uuid, current_bingo.get_id(), self.has_achieved],
         )?;
         Ok(())
     }

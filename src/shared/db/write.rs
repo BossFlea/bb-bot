@@ -45,8 +45,8 @@ impl DbRequest for AddBingoMapping {
 
 pub struct SetCurrentBingo {
     pub bingo_id: u8,
-    pub start: u32,
-    pub end: u32,
+    pub start: i64,
+    pub end: i64,
 }
 impl DbRequest for SetCurrentBingo {
     type ReturnValue = Result<()>;

@@ -53,26 +53,39 @@ impl DbRequest for GetBingoData {
 #[allow(dead_code)]
 pub struct GetCurrentBingo;
 impl DbRequest for GetCurrentBingo {
-    type ReturnValue = Result<Option<(u8, u32, u32)>>;
+    type ReturnValue = Result<Option<(Bingo, i64, i64)>>;
 
     fn execute(self, conn: &mut Connection) -> Self::ReturnValue {
-        conn.query_one(
-            "
-            SELECT current_bingo, current_bingo_starts, current_bingo_ends
-            FROM current_bingo_global WHERE id=1
-            ",
-            [],
-            |row| {
-                Ok((
-                    row.get::<_, Option<u8>>("current_bingo")?,
-                    row.get::<_, Option<u32>>("current_bingo_starts")?,
-                    row.get::<_, Option<u32>>("current_bingo_ends")?,
-                ))
-            },
-        )
-        .optional()
-        // flatten
-        .map(|opt| opt.and_then(|(id, start, end)| Some((id?, start?, end?))))
+        let current = conn
+            .query_one(
+                "
+                SELECT current_bingo, current_bingo_starts, current_bingo_ends
+                FROM current_bingo_global WHERE id=1
+                ",
+                [],
+                |row| {
+                    Ok((
+                        row.get::<_, Option<u8>>("current_bingo")?,
+                        row.get::<_, Option<i64>>("current_bingo_starts")?,
+                        row.get::<_, Option<i64>>("current_bingo_ends")?,
+                    ))
+                },
+            )
+            .optional()
+            // flatten
+            .map(|opt| opt.and_then(|(id, start, end)| Some((id?, start?, end?))))?;
+
+        let Some((bingo_id, start, end)) = current else {
+            return Ok(None);
+        };
+
+        let bingo = GetBingoData {
+            bingo_ids: vec![bingo_id],
+        }
+        .execute(conn)?
+        .pop();
+
+        Ok(bingo.map(|b| (b, start, end)))
     }
 }
 

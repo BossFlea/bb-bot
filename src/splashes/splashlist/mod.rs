@@ -119,7 +119,7 @@ pub async fn generate_message(ctx: &Context<'_>) -> Result<CreateReply<'static>>
     let db = &data.db_handle;
     let api = &data.api_handle;
 
-    let (current_bingo, _) = api.update_current_bingo(db).await?;
+    let (current_bingo, _, _) = api.update_current_bingo(db).await?;
 
     let bingo_days = if current_bingo.kind == BingoKind::Normal {
         7

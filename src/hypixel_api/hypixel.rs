@@ -1,7 +1,7 @@
 use std::str::FromStr as _;
 
 use anyhow::{Context as _, Result, bail};
-use chrono::{DateTime, Datelike as _, Utc};
+use chrono::{DateTime, Datelike as _};
 use serde_json::Value;
 use tracing::warn;
 
@@ -53,7 +53,10 @@ pub async fn query_api(
     Ok((json, text))
 }
 
-pub async fn get_current_bingo_data(handle: &ApiHandle, db: &DbHandle) -> Result<(Bingo, bool)> {
+pub async fn get_current_bingo_data(
+    handle: &ApiHandle,
+    db: &DbHandle,
+) -> Result<(Bingo, i64, i64)> {
     let (json, _) = query_api(handle, "/v2/resources/skyblock/bingo", &[]).await?;
 
     let bingo_id = json["id"]
@@ -69,15 +72,15 @@ pub async fn get_current_bingo_data(handle: &ApiHandle, db: &DbHandle) -> Result
         _ => BingoKind::Normal,
     };
 
-    let start = (json["start"]
-        .as_u64()
+    let start = json["start"]
+        .as_i64()
         .context("No start time found for current bingo")?
-        / 1000) as u32;
+        / 1000;
 
-    let end = (json["end"]
-        .as_u64()
+    let end = json["end"]
+        .as_i64()
         .context("No end time found for current bingo")?
-        / 1000) as u32;
+        / 1000;
 
     db.request(SetCurrentBingo {
         bingo_id,
@@ -92,7 +95,7 @@ pub async fn get_current_bingo_data(handle: &ApiHandle, db: &DbHandle) -> Result
         })
         .await??;
 
-    Ok((bingo, (Utc::now().timestamp() as u32) < end))
+    Ok((bingo, start, end))
 }
 
 pub async fn linked_discord(

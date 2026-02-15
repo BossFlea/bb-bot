@@ -38,7 +38,7 @@ impl ApiHandle {
             .context(Self::INVALID_RESPONSE)
     }
 
-    pub async fn update_current_bingo(&self, db: &DbHandle) -> Result<(Bingo, bool)> {
+    pub async fn update_current_bingo(&self, db: &DbHandle) -> Result<(Bingo, i64, i64)> {
         hypixel::get_current_bingo_data(self, db)
             .await
             .context(Self::INVALID_RESPONSE)

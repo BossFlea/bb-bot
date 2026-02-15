@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
+use chrono::Utc;
 use poise::serenity_prelude::{
     ButtonStyle, CacheHttp as _, Context as SerenityContext, CreateButton, CreateComponent,
     CreateContainer, CreateContainerComponent, CreateSection, CreateSectionAccessory,
@@ -290,7 +291,8 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
     let db = &data.db_handle;
     let api = &data.api_handle;
 
-    let (current_bingo, bingo_active) = api.update_current_bingo(db).await?;
+    let (current_bingo, _, bingo_end) = api.update_current_bingo(db).await?;
+    let bingo_ended = Utc::now().timestamp() > bingo_end;
     let current_network_bingo = NetworkBingo::ALL.last().map(|b| *b as u8).unwrap_or(0);
     let network_bingo_active = db.request(GetIsNetworkBingo).await??.unwrap_or(false);
 
@@ -311,7 +313,7 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
                 // cache miss
                 None => {
                     let completions = api.bingo_completions(uuid).await?;
-                    if !bingo_active || completions.contains(&current_bingo.get_id()) {
+                    if bingo_ended || completions.contains(&current_bingo.get_id()) {
                         db.request(CacheCompletions {
                             uuid: uuid.to_string(),
                             completions: BitSet::from_indexes(&completions),
@@ -389,7 +391,7 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
                                 .iter()
                                 .any(|b| b.get_id() == data.created_during);
 
-                        if !bingo_active || current_bingo_completed {
+                        if bingo_ended || current_bingo_completed {
                             db.request(CacheImmortal {
                                 uuid: uuid.to_string(),
                                 has_achieved: current_immortal,
@@ -400,7 +402,7 @@ pub async fn player_roles(ctx: &SerenityContext, uuid: &str) -> Result<PlayerRol
                     }
                 };
 
-                if !bingo_active || data.created_during == current_bingo.get_id() {
+                if bingo_ended || data.created_during == current_bingo.get_id() {
                     db.request(CacheBingoRank {
                         uuid: uuid.to_string(),
                         rank: data.bingo_rank,

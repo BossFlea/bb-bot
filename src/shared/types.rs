@@ -121,8 +121,9 @@ impl BitSet {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BingoKind {
+    #[default]
     Normal = 0,
     Extreme = 1,
     Secret = 2,
@@ -148,7 +149,7 @@ impl BingoKind {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Bingo {
     pub kind_specific_id: u8,
     pub kind: BingoKind,
