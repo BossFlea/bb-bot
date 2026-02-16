@@ -143,7 +143,7 @@ The `{script}` SQL script executed without errors."
 #[allow(dead_code)]
 async fn autocomplete_script<'a>(
     _ctx: Context<'_>,
-    partial: &'a str,
+    partial: &str,
 ) -> CreateAutocompleteResponse<'a> {
     let mut filenames = Vec::new();
     if let Err(err) = get_filenames(Path::new(DB_SCRIPTS_DIR), &mut filenames) {

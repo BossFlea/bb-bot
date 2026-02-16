@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::{Error, Result, anyhow};
 use poise::{
     BoxFuture, CreateReply, FrameworkError,
@@ -334,15 +336,15 @@ The bot is missing the following permissions to execute this command: **{missing
                     "User is lacking permissions for {:?}: {permissions}",
                     ctx.invocation_string(),
                 );
-                format!(
+                Cow::Owned(format!(
                     "You are missing the following permissions to execute this command: **{permissions}**"
-                )
+                ))
             } else {
                 warn!(
                     "User is lacking permissions for {:?}",
                     ctx.invocation_string(),
                 );
-                "You do not have the permissions needed to execute this command".to_string()
+                Cow::Borrowed("You do not have the permissions needed to execute this command")
             };
 
             let container = CreateComponent::Container(

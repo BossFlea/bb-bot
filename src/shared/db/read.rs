@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::{Context as _, anyhow, bail};
 use poise::serenity_prelude::EmojiId;
 use rusqlite::{Connection, OptionalExtension as _, Result, params, types::Value};
@@ -141,11 +143,11 @@ impl DbRequest for RawQueryReadonly {
                     let mut values = Vec::with_capacity(column_names.len());
                     for column in &column_names {
                         values.push(match row.get::<_, Value>(column.as_str())? {
-                            Value::Null => "NULL".to_string(),
-                            Value::Integer(i) => i.to_string(),
-                            Value::Real(f) => f.to_string(),
-                            Value::Text(t) => t,
-                            Value::Blob(b) => format!("<blob {} bytes>", b.len()),
+                            Value::Null => Cow::Borrowed("NULL"),
+                            Value::Integer(i) => Cow::Owned(i.to_string()),
+                            Value::Real(f) => Cow::Owned(f.to_string()),
+                            Value::Text(t) => Cow::Owned(t),
+                            Value::Blob(b) => Cow::Owned(format!("<blob {} bytes>", b.len())),
                         });
                     }
 

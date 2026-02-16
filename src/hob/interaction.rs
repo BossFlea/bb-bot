@@ -57,13 +57,14 @@ pub async fn handle_interaction(
     );
 
     let mut session = session_mutex.lock().await;
+    let (owner_id, owner_name) = &session.owner;
 
     if let Either::Left(component_interaction) = &interaction
-        && component_interaction.user.id != session.owner.id
+        && component_interaction.user.id != *owner_id
     {
         warn!(
             "{} tried to interact with {}'s menu",
-            component_interaction.user.name, session.owner.name
+            component_interaction.user.name, owner_name
         );
 
         let container = CreateComponent::Container(
@@ -71,7 +72,7 @@ pub async fn handle_interaction(
                 CreateTextDisplay::new(format!(
                     "## You don't own this menu!
 Only {} is allowed to interact with this menu.",
-                    session.owner.mention()
+                    owner_id.mention()
                 )),
             )])
             .accent_color(DANGER),

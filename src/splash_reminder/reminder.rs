@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::time::Duration;
+use std::{borrow::Cow, sync::Arc};
 
 use anyhow::Result;
 use poise::serenity_prelude::{
@@ -21,13 +21,13 @@ pub enum ReminderVariant {
 
 pub async fn send_reminder(http: Arc<Http>, variant: ReminderVariant) -> Result<()> {
     let variant_text = match variant {
-        ReminderVariant::Time => "It has been 1 hour since the last splash!".to_string(),
+        ReminderVariant::Time => Cow::Borrowed("It has been 1 hour since the last splash!"),
         ReminderVariant::Reactions {
             emoji_mention,
             emoji_count,
-        } => {
-            format!("The latest splash message has {emoji_count}+ {emoji_mention} reactions!",)
-        }
+        } => Cow::Owned(format!(
+            "The latest splash message has {emoji_count}+ {emoji_mention} reactions!"
+        )),
     };
 
     let text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use anyhow::{Context as _, Result, anyhow, bail};
 use either::Either;
@@ -64,13 +64,14 @@ pub async fn handle_interaction(
     );
 
     let mut session = session_mutex.lock().await;
+    let (owner_id, owner_name) = &session.owner;
 
     if let Either::Left(component_interaction) = &interaction
-        && component_interaction.user.id != session.owner.id
+        && component_interaction.user.id != *owner_id
     {
         warn!(
             "{} tried to interact with {}'s menu",
-            component_interaction.user.name, session.owner.name
+            component_interaction.user.name, owner_name
         );
 
         let container = CreateComponent::Container(
@@ -78,7 +79,7 @@ pub async fn handle_interaction(
                 CreateTextDisplay::new(format!(
                     "## You don't own this menu!
 Only {} is allowed to interact with this menu.",
-                    session.owner.mention()
+                    owner_id.mention()
                 )),
             )])
             .accent_color(DANGER),
@@ -159,13 +160,15 @@ async fn component(
                 .await??;
 
             let role_list = if detected_roles.is_empty() {
-                "*None*".to_string()
+                Cow::Borrowed("*None*")
             } else {
-                detected_roles
-                    .into_iter()
-                    .map(RoleMapping::to_list_entry)
-                    .collect::<Vec<_>>()
-                    .join("\n")
+                Cow::Owned(
+                    detected_roles
+                        .into_iter()
+                        .map(RoleMapping::to_list_entry)
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                )
             };
 
             let container = CreateComponent::Container(
@@ -222,7 +225,6 @@ If such a gap is intentional, roles can still be configured manually."
             {
                 values
                     .first()
-                    .map(String::from)
                     .context("Invalid interaction: Expected selected option")?
             } else {
                 bail!("Invalid interaction: Expected String SelectMenu")

@@ -59,7 +59,7 @@ pub fn generate_entry(menu_id: u64, hob_entry: HobEntry, page: &mut usize) -> Me
                     bingo,
                     comment
                         .filter(|s| !s.is_empty())
-                        .unwrap_or("*None*".to_string())
+                        .unwrap_or_else(|| "*None*".to_string())
                 )));
 
             let navigation_row = navigation::nagivation_back(&id_prefix);
@@ -92,7 +92,7 @@ pub fn generate_entry(menu_id: u64, hob_entry: HobEntry, page: &mut usize) -> Me
                     title,
                     comment
                         .filter(|s| !s.is_empty())
-                        .unwrap_or("*None*".to_string()),
+                        .unwrap_or_else(|| "*None*".to_string()),
                 )));
 
             let subentry_text =

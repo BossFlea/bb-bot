@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use poise::serenity_prelude::{
     ButtonStyle, CreateButton, CreateContainerComponent, CreateSection, CreateSectionAccessory,
     CreateSectionComponent, CreateTextDisplay,
@@ -69,15 +71,13 @@ impl HobEntry {
                         .style(ButtonStyle::Primary),
                 );
                 let description = match subentries.first() {
-                    Some(subentry) => {
-                        format!(
-                            "`{}` and {} others\nmost recently during {}",
-                            subentry.player,
-                            subentries.len() - 1,
-                            subentry.bingo
-                        )
-                    }
-                    None => "*No Players*".to_string(),
+                    Some(subentry) => Cow::Owned(format!(
+                        "`{}` and {} others\nmost recently during {}",
+                        subentry.player,
+                        subentries.len() - 1,
+                        subentry.bingo
+                    )),
+                    None => Cow::Borrowed("*No Players*"),
                 };
                 let text = CreateSectionComponent::TextDisplay(CreateTextDisplay::new(format!(
                     "###  {title}\n{description}"
@@ -120,13 +120,15 @@ impl HobEntry {
                     .and_then(|c| (!c.is_empty()).then_some(format!("-# {c}")))
                     .unwrap_or_default();
                 let list = if subentries.is_empty() {
-                    "*No Players*".to_string()
+                    Cow::Borrowed("*No Players*")
                 } else {
-                    subentries
-                        .iter()
-                        .map(OngoingSubentry::to_list_item)
-                        .collect::<Vec<_>>()
-                        .join("\n")
+                    Cow::Owned(
+                        subentries
+                            .iter()
+                            .map(OngoingSubentry::to_list_item)
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
                 };
                 let text = format!("###  {title}\n{list}\n{comment}");
                 let length = text.len();

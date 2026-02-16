@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Context as _, Result};
 use poise::serenity_prelude::{
     Component, CreateComponent, CreateContainer, CreateContainerComponent, CreateTextDisplay,
-    GenericChannelId, Http, MessageId, User, async_trait,
+    GenericChannelId, Http, MessageId, UserId, async_trait,
 };
 use tokio::sync::Notify;
 
@@ -24,7 +24,7 @@ mod view_entry;
 pub struct HobEditSession {
     pub menu_id: u64,
     pub state: HobEditState,
-    pub owner: User,
+    pub owner: (UserId, String),
     pub channel_id: GenericChannelId,
     pub message_id: MessageId,
     pub timeout_reset: Arc<Notify>,
@@ -59,7 +59,7 @@ impl Expirable for HobEditSession {
         http.edit_message(channel_id, message_id, &menu.into_edit(), Vec::new())
             .await?;
 
-        Ok(self.owner.name.as_str())
+        Ok(self.owner.1.as_str())
     }
 
     fn message_ids(&self) -> (&GenericChannelId, &MessageId) {

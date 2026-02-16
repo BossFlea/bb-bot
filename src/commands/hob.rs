@@ -41,10 +41,12 @@ async fn manage(ctx: Context<'_>) -> Result<()> {
 
     let message_handle = ctx.send(menu.into_reply()).await?.into_message().await?;
 
+    let owner = (ctx.author().id, ctx.author().name.to_string());
+
     let session = HobEditSession {
         menu_id,
         state: HobEditState::SelectEntry(initial_state),
-        owner: ctx.author().clone(),
+        owner,
         channel_id: message_handle.channel_id,
         message_id: message_handle.id,
         timeout_reset: Arc::new(Notify::new()),

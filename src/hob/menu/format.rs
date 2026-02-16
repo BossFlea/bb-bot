@@ -98,7 +98,7 @@ pub fn build_hob_backup_script(hob_entries: &[HobEntry]) -> String {
                     comment
                         .as_ref()
                         .map(wrap_sql_string)
-                        .unwrap_or("NULL".to_string()),
+                        .unwrap_or_else(|| "NULL".to_string()),
                     bingo.kind_specific_id,
                     bingo.kind as u8,
                 ));
@@ -118,7 +118,7 @@ pub fn build_hob_backup_script(hob_entries: &[HobEntry]) -> String {
                     comment
                         .as_ref()
                         .map(wrap_sql_string)
-                        .unwrap_or("NULL".to_string()),
+                        .unwrap_or_else(|| "NULL".to_string()),
                 ));
                 for subentry in subentries {
                     ongoing_subentries_values.push(format!(

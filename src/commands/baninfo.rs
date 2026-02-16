@@ -25,12 +25,12 @@ pub async fn baninfo(
 
     let ban_details = if let Some(ban) = ban {
         if let Some(reason) = ban.reason {
-            format!("### Ban Reason\n{reason}")
+            Cow::Owned(format!("### Ban Reason\n{reason}"))
         } else {
-            "### Ban Reason\n*No reason provided.*".to_string()
+            Cow::Borrowed("### Ban Reason\n*No reason provided.*")
         }
     } else {
-        "### No active ban.".to_string()
+        Cow::Borrowed("### No active ban.")
     };
 
     let info_text = format!(
@@ -38,11 +38,10 @@ pub async fn baninfo(
 ### User {}
 Username: `{}`
 User ID: `{}`
-{}",
+{ban_details}",
         user.mention(),
         user.name,
         user.id,
-        ban_details
     );
 
     let container = CreateComponent::Container(CreateContainer::new(vec![

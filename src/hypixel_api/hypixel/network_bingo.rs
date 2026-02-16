@@ -120,31 +120,31 @@ impl CardType {
 }
 
 /// Goal completion detection for bingos where there aren't any `rewards` on the API
-struct ExpectedGoals {
-    objectives: HashMap<Difficulty, HashMap<String, i64>>,
+struct ExpectedGoals<'a> {
+    objectives: HashMap<Difficulty, HashMap<&'a str, i64>>,
 }
 
-impl ExpectedGoals {
-    fn new(goals: &[&[(&str, i64)]; 3]) -> Self {
+impl<'a> ExpectedGoals<'a> {
+    fn new(goals: &[&[(&'a str, i64)]; 3]) -> Self {
         let mut objectives = HashMap::new();
 
         objectives.insert(
             Difficulty::Easy,
-            goals[0].iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            goals[0].iter().map(|(k, v)| (*k, *v)).collect(),
         );
         objectives.insert(
             Difficulty::Medium,
-            goals[1].iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            goals[1].iter().map(|(k, v)| (*k, *v)).collect(),
         );
         objectives.insert(
             Difficulty::Hard,
-            goals[2].iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            goals[2].iter().map(|(k, v)| (*k, *v)).collect(),
         );
 
         Self { objectives }
     }
 
-    fn expected(&self, diff: Difficulty) -> &HashMap<String, i64> {
+    fn expected(&self, diff: Difficulty) -> &HashMap<&str, i64> {
         &self.objectives[&diff]
     }
 
@@ -159,7 +159,9 @@ impl ExpectedGoals {
         let objectives: HashMap<String, i64> =
             serde_json::from_value(obj.to_owned()).unwrap_or_default();
 
-        objectives == *self.expected(diff)
+        let expected = self.expected(diff);
+        expected.len() == objectives.len()
+            && expected.iter().all(|(&k, v)| objectives.get(k) == Some(v))
     }
 
     fn is_fully_completed(&self, bingo_json: &Value) -> bool {

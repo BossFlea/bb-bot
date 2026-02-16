@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::{Context as _, Result, anyhow, bail};
 use either::Either;
 use poise::serenity_prelude::{
@@ -83,7 +85,7 @@ async fn component(
                 let discriminator = interaction
                     .user
                     .discriminator
-                    .map_or("".to_string(), |d| format!("#{}", d.get()));
+                    .map_or(Cow::Borrowed(""), |d| Cow::Owned(format!("#{}", d.get())));
                 let full_username = format!("{}{}", interaction.user.name, discriminator);
 
                 let instruction_text = CreateContainerComponent::TextDisplay(CreateTextDisplay::new(

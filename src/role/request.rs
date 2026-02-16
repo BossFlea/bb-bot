@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use anyhow::{Context as _, Result};
 use chrono::Utc;
@@ -45,7 +45,7 @@ pub async fn link_user(ctx: &SerenityContext, user: &User, mc_name: &str) -> Res
         Some(linked) => {
             let discriminator = user
                 .discriminator
-                .map_or("".to_string(), |d| format!("#{}", d.get()));
+                .map_or(Cow::Borrowed(""), |d| Cow::Owned(format!("#{}", d.get())));
 
             if linked != format!("{}{}", user.name, discriminator) {
                 return Ok(LinkStatus::DifferentDiscord {
@@ -97,8 +97,8 @@ impl RoleRequestStatus {
 
     pub fn to_diff_message(&self, other_user: Option<&UserId>) -> CreateComponent<'static> {
         let user_mention = match other_user {
-            Some(id) => format!("{}'s", id.mention()),
-            None => "Your".to_string(),
+            Some(id) => Cow::Owned(format!("{}'s", id.mention())),
+            None => Cow::Borrowed("Your"),
         };
 
         let unlink_button = CreateButton::new("role:request:unlink")
@@ -107,23 +107,27 @@ impl RoleRequestStatus {
 
         let diff_text = match self {
             RoleRequestStatus::Updated { added, removed, .. } => {
-                let added_mentions: String = if added.is_empty() {
-                    "*None*".to_string()
+                let added_mentions = if added.is_empty() {
+                    Cow::Borrowed("*None*")
                 } else {
-                    added
-                        .iter()
-                        .map(|role| role.mention().to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n")
+                    Cow::Owned(
+                        added
+                            .iter()
+                            .map(|role| role.mention().to_string())
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
                 };
-                let removed_mentions: String = if removed.is_empty() {
-                    "*None*".to_string()
+                let removed_mentions = if removed.is_empty() {
+                    Cow::Borrowed("*None*")
                 } else {
-                    removed
-                        .iter()
-                        .map(|role| role.mention().to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n")
+                    Cow::Owned(
+                        removed
+                            .iter()
+                            .map(|role| role.mention().to_string())
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
                 };
 
                 CreateContainerComponent::TextDisplay(CreateTextDisplay::new(format!(
@@ -187,19 +191,21 @@ impl PlayerRoles {
         );
 
         let network_bingo_list = if self.network_bingos.is_empty() {
-            "*None*".to_string()
+            Cow::Borrowed("*None*")
         } else {
-            self.network_bingos
-                .iter()
-                .map(|n| format!("- {n}"))
-                .collect::<Vec<_>>()
-                .join("\n")
+            Cow::Owned(
+                self.network_bingos
+                    .iter()
+                    .map(|n| format!("- {n}"))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            )
         };
 
         let bingo_rank = if self.bingo_rank == 0 {
-            "*None*".to_string()
+            Cow::Borrowed("*None*")
         } else {
-            format!("Rank #{}", self.bingo_rank)
+            Cow::Owned(format!("Rank #{}", self.bingo_rank))
         };
 
         CreateTextDisplay::new(format!(
