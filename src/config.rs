@@ -26,3 +26,10 @@ pub const SPLASH_REMINDER_CHANNEL: GenericChannelId = GenericChannelId::new(9893
 pub const TY_CHANNEL: GenericChannelId = GenericChannelId::new(1006007462043852910);
 // part of error messages
 pub const BOT_MAINTAINER: UserId = UserId::new(821735954128830504);
+
+// messages to forward and ping for
+pub const SECRET_BINGO_EXTERNAL: GenericChannelId = GenericChannelId::new(1179247468811145277);
+// where to forward external announcements
+pub const SECRET_BINGO_ANNOUNCEMENTS: GenericChannelId = GenericChannelId::new(1178938207556087880);
+// role to ping for secret bingo announcements
+pub const SECRET_BINGO_DISCOVERIES: RoleId = RoleId::new(1178939550861623329);

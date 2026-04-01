@@ -1,12 +1,12 @@
 use std::{borrow::Cow, collections::HashMap, env, str::FromStr as _, sync::Arc};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use either::Either;
 use poise::{
     Framework, FrameworkOptions, PrefixFrameworkOptions,
     serenity_prelude::{
-        ClientBuilder, Context as SerenityContext, EventHandler, FullEvent, GatewayIntents,
-        Interaction, Mentionable as _, Permissions, Token, async_trait,
+        CacheHttp, ClientBuilder, Context as SerenityContext, CreateMessage, EventHandler,
+        FullEvent, GatewayIntents, Interaction, Mentionable as _, Permissions, Token, async_trait,
     },
 };
 use tokio::sync::{Mutex, mpsc};
@@ -16,7 +16,9 @@ use db::DbHandle;
 use hypixel_api::ApiHandle;
 use shared::BotData;
 
-use crate::config::SPLASHES_CHANNEL;
+use crate::config::{
+    SECRET_BINGO_ANNOUNCEMENTS, SECRET_BINGO_DISCOVERIES, SECRET_BINGO_EXTERNAL, SPLASHES_CHANNEL,
+};
 use crate::splash_reminder::SplashReminderHandle;
 
 mod commands;
@@ -197,6 +199,26 @@ impl EventHandler for Handler {
             FullEvent::Message { new_message } => {
                 if new_message.channel_id == SPLASHES_CHANNEL {
                     splash_reminder::event::splashes_message(ctx, new_message).await
+                } else if new_message.channel_id == SECRET_BINGO_EXTERNAL
+                    && new_message.message_reference.is_some()
+                {
+                    SECRET_BINGO_ANNOUNCEMENTS
+                        .send_message(
+                            ctx.http(),
+                            CreateMessage::new()
+                                .content(format!(
+                                    "{}\n{}",
+                                    SECRET_BINGO_DISCOVERIES.mention(),
+                                    new_message.content
+                                ))
+                                .allowed_mentions(
+                                    poise::serenity_prelude::CreateAllowedMentions::new()
+                                        .roles(&[SECRET_BINGO_DISCOVERIES]),
+                                ),
+                        )
+                        .await
+                        .context("failed to forward message")
+                        .map(|_| ())
                 } else {
                     Ok(())
                 }
