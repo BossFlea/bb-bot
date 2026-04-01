@@ -5,10 +5,12 @@ use either::Either;
 use poise::{
     Framework, FrameworkOptions, PrefixFrameworkOptions,
     serenity_prelude::{
-        CacheHttp, ClientBuilder, Context as SerenityContext, CreateMessage, EventHandler,
-        FullEvent, GatewayIntents, Interaction, Mentionable as _, Permissions, Token, async_trait,
+        CacheHttp, ClientBuilder, Context as SerenityContext, CreateAllowedMentions, CreateMessage,
+        EventHandler, FullEvent, GatewayIntents, Interaction, Mentionable as _, Message,
+        Permissions, Token, async_trait,
     },
 };
+use serenity::{all::CreateAttachment, futures::future::try_join_all};
 use tokio::sync::{Mutex, mpsc};
 use tracing::{info, warn};
 
@@ -196,33 +198,15 @@ impl EventHandler for Handler {
                 }
                 _ => Ok(()),
             },
-            FullEvent::Message { new_message } => {
-                if new_message.channel_id == SPLASHES_CHANNEL {
+            FullEvent::Message { new_message } => match new_message.channel_id {
+                SPLASHES_CHANNEL => {
                     splash_reminder::event::splashes_message(ctx, new_message).await
-                } else if new_message.channel_id == SECRET_BINGO_EXTERNAL
-                    && new_message.message_reference.is_some()
-                {
-                    SECRET_BINGO_ANNOUNCEMENTS
-                        .send_message(
-                            ctx.http(),
-                            CreateMessage::new()
-                                .content(format!(
-                                    "{}\n{}",
-                                    SECRET_BINGO_DISCOVERIES.mention(),
-                                    new_message.content
-                                ))
-                                .allowed_mentions(
-                                    poise::serenity_prelude::CreateAllowedMentions::new()
-                                        .roles(&[SECRET_BINGO_DISCOVERIES]),
-                                ),
-                        )
-                        .await
-                        .context("failed to forward message")
-                        .map(|_| ())
-                } else {
-                    Ok(())
                 }
-            }
+                SECRET_BINGO_EXTERNAL if new_message.message_reference.is_some() => {
+                    forward_secret_bingo_announcement(ctx, new_message).await
+                }
+                _ => Ok(()),
+            },
             FullEvent::ReactionAdd { add_reaction, .. } => {
                 if add_reaction.channel_id == SPLASHES_CHANNEL {
                     splash_reminder::event::splashes_reaction(ctx, add_reaction).await
@@ -235,4 +219,32 @@ impl EventHandler for Handler {
             error::event_handler_error(err, ctx, event).await;
         }
     }
+}
+
+async fn forward_secret_bingo_announcement(ctx: &SerenityContext, message: &Message) -> Result<()> {
+    let attachments = try_join_all(message.attachments.iter().map(|attachment| async {
+        CreateAttachment::url(
+            ctx.http(),
+            attachment.url.to_string(),
+            attachment.filename.to_string(),
+        )
+        .await
+    }))
+    .await?;
+
+    SECRET_BINGO_ANNOUNCEMENTS
+        .send_message(
+            ctx.http(),
+            CreateMessage::new()
+                .add_files(attachments)
+                .content(format!(
+                    "From **Official Hunters Discord**:\n\n{}\n-# {}",
+                    message.content,
+                    SECRET_BINGO_DISCOVERIES.mention(),
+                ))
+                .allowed_mentions(CreateAllowedMentions::new().roles(&[SECRET_BINGO_DISCOVERIES])),
+        )
+        .await
+        .context("failed to forward message")?;
+    Ok(())
 }
