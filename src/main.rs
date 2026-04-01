@@ -222,6 +222,12 @@ impl EventHandler for Handler {
 }
 
 async fn forward_secret_bingo_announcement(ctx: &SerenityContext, message: &Message) -> Result<()> {
+    let ping = if message.content.contains("@Bingo Discovery") {
+        format!("-# {}", SECRET_BINGO_DISCOVERIES.mention())
+    } else {
+        String::new()
+    };
+
     let attachments = try_join_all(message.attachments.iter().map(|attachment| async {
         CreateAttachment::url(
             ctx.http(),
@@ -238,9 +244,8 @@ async fn forward_secret_bingo_announcement(ctx: &SerenityContext, message: &Mess
             CreateMessage::new()
                 .add_files(attachments)
                 .content(format!(
-                    "From **Official Hunters Discord**:\n\n{}\n-# {}",
+                    "From **Official Hunters Discord**:\n\n{}\n{ping}",
                     message.content,
-                    SECRET_BINGO_DISCOVERIES.mention(),
                 ))
                 .allowed_mentions(CreateAllowedMentions::new().roles(&[SECRET_BINGO_DISCOVERIES])),
         )
