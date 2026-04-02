@@ -223,8 +223,10 @@ impl EventHandler for Handler {
 
 async fn forward_secret_bingo_announcement(ctx: &SerenityContext, message: &Message) -> Result<()> {
     let ping = if message.content.contains("@Bingo Discovery") {
+        info!("Forwarding message to secret bingo announcements channel with discovery ping");
         format!("-# {}", SECRET_BINGO_DISCOVERIES.mention())
     } else {
+        info!("Forwarding message to secret bingo announcements channel (without ping)");
         String::new()
     };
 
