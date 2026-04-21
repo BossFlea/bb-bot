@@ -37,6 +37,10 @@ pub fn network_bingo_completions(seasonal: &Value) -> Vec<NetworkBingo> {
             has_any_difficulty_pair(&seasonal["easter"]["2025"]["bingo"]),
             NetworkBingo::Anniversary2025,
         ),
+        (
+            has_any_difficulty_pair(&seasonal["easter"]["2026"]["bingo"]),
+            NetworkBingo::Anniversary2026,
+        ),
     ];
 
     checks.into_iter().for_each(|(completed, bingo)| {

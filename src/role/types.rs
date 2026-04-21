@@ -40,6 +40,7 @@ pub enum NetworkBingo {
     Summer2024 = 5,
     Halloween2024 = 6,
     Anniversary2025 = 7,
+    Anniversary2026 = 8,
 }
 
 impl Display for NetworkBingo {
@@ -52,6 +53,7 @@ impl Display for NetworkBingo {
             NetworkBingo::Summer2024 => "Summer Bingo 2024",
             NetworkBingo::Halloween2024 => "Halloween Bingo 2024",
             NetworkBingo::Anniversary2025 => "Anniversary Bingo 2025",
+            NetworkBingo::Anniversary2026 => "Anniversary Bingo 2026",
             _ => "Unknown Network Bingo",
         };
         write!(f, "{}", human_name)
@@ -59,7 +61,7 @@ impl Display for NetworkBingo {
 }
 
 impl NetworkBingo {
-    pub const ALL: [NetworkBingo; 7] = [
+    pub const ALL: [NetworkBingo; 8] = [
         NetworkBingo::Anniversary2023,
         NetworkBingo::Halloween2023,
         NetworkBingo::Christmas2023,
@@ -67,6 +69,7 @@ impl NetworkBingo {
         NetworkBingo::Summer2024,
         NetworkBingo::Halloween2024,
         NetworkBingo::Anniversary2025,
+        NetworkBingo::Anniversary2026,
     ];
 
     pub fn from_u8(id: u8) -> Self {
@@ -78,6 +81,7 @@ impl NetworkBingo {
             5 => Self::Summer2024,
             6 => Self::Halloween2024,
             7 => Self::Anniversary2025,
+            8 => Self::Anniversary2026,
             _ => Self::Unknown,
         }
     }
