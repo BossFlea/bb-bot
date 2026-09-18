@@ -25,23 +25,25 @@ pub trait Expirable: Send + Sync + 'static {
     async fn invalidate<'a>(&'a self, http: Arc<Http>) -> Result<&'a str>;
 
     fn disable_components(components: &mut FixedArray<Component>) {
-        for c in components {
-            match c {
-                Component::ActionRow(action_row) => disable_action_row(action_row),
-                Component::Section(section) => disable_section(section),
-                Component::Container(container) => {
-                    for cc in &mut container.components {
-                        match cc {
-                            ContainerComponent::ActionRow(action_row) => {
-                                disable_action_row(action_row)
-                            }
-                            ContainerComponent::Section(section) => disable_section(section),
-                            _ => (),
-                        }
+        disable_components(components);
+    }
+}
+
+pub fn disable_components(components: &mut [Component]) {
+    for c in components {
+        match c {
+            Component::ActionRow(action_row) => disable_action_row(action_row),
+            Component::Section(section) => disable_section(section),
+            Component::Container(container) => {
+                for cc in &mut container.components {
+                    match cc {
+                        ContainerComponent::ActionRow(action_row) => disable_action_row(action_row),
+                        ContainerComponent::Section(section) => disable_section(section),
+                        _ => (),
                     }
                 }
-                _ => (),
             }
+            _ => (),
         }
     }
 }

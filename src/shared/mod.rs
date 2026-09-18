@@ -24,6 +24,7 @@ pub struct BotData {
     pub hob_sessions: Arc<Mutex<HashMap<u64, Arc<Mutex<HobEditSession>>>>>,
     pub role_sessions: Arc<Mutex<HashMap<u64, Arc<Mutex<RoleConfigSession>>>>>,
     pub splash_reminder: Mutex<SplashReminderHandle>,
+    pub chchest_cooldowns: Mutex<poise::CooldownTracker>,
 }
 
 pub type Context<'a> = poise::Context<'a, BotData, Error>;

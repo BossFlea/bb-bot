@@ -23,6 +23,7 @@ use crate::config::{
 };
 use crate::splash_reminder::SplashReminderHandle;
 
+mod chchest;
 mod commands;
 mod config;
 mod db;
@@ -71,11 +72,15 @@ async fn main() -> Result<()> {
         commands::splashreminder::splashreminder(),
         commands::register::unregister(),
         commands::baninfo::baninfo(),
+        commands::chchest::chchest(),
     ];
     // Set default permission to `MANAGE_GUILD`, as bots cannot access endpoint for role-based
     // permission override (manual configuration intended)
     for cmd in &mut commands {
-        cmd.default_member_permissions = Permissions::MANAGE_GUILD;
+        // leave `/chchest` freely available
+        if cmd.qualified_name != "chchest" {
+            cmd.default_member_permissions = Permissions::MANAGE_GUILD;
+        }
     }
 
     // `GUILD_MESSAGES`: only for `register` prefix command
@@ -135,6 +140,7 @@ async fn main() -> Result<()> {
             hob_sessions: Arc::new(Mutex::new(HashMap::new())),
             role_sessions: Arc::new(Mutex::new(HashMap::new())),
             splash_reminder: Mutex::new(SplashReminderHandle::new()),
+            chchest_cooldowns: Mutex::new(poise::CooldownTracker::new()),
         }))
         .await?;
 
@@ -170,6 +176,14 @@ impl EventHandler for Handler {
                             )
                             .await
                         }
+                        "chchest" => {
+                            chchest::interaction::handle_interaction(
+                                ctx,
+                                Either::Left(interaction),
+                                action,
+                            )
+                            .await
+                        }
                         _ => Ok(()),
                     }
                 }
@@ -187,6 +201,14 @@ impl EventHandler for Handler {
                         }
                         "role" => {
                             role::interaction::handle_interaction(
+                                ctx,
+                                Either::Right(interaction),
+                                action,
+                            )
+                            .await
+                        }
+                        "chchest" => {
+                            chchest::interaction::handle_interaction(
                                 ctx,
                                 Either::Right(interaction),
                                 action,

@@ -1,4 +1,5 @@
 pub mod baninfo;
+pub mod chchest;
 pub mod debug;
 pub mod hob;
 pub mod lastsplashed;

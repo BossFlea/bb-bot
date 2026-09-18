@@ -161,7 +161,7 @@ mod tests {
             PaginatedChunk {
                 range: 0..5,
                 page: 0,
-                total_pages: 1
+                total_pages: 2
             }
         );
         assert_eq!(

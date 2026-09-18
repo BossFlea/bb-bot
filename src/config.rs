@@ -33,3 +33,10 @@ pub const SECRET_BINGO_EXTERNAL: GenericChannelId = GenericChannelId::new(117924
 pub const SECRET_BINGO_ANNOUNCEMENTS: GenericChannelId = GenericChannelId::new(1178938207556087880);
 // role to ping for secret bingo announcements
 pub const SECRET_BINGO_DISCOVERIES: RoleId = RoleId::new(1178939550861623329);
+
+// channel where `/chchest` announcements are sent
+pub const CHCHEST_CHANNEL: GenericChannelId = GenericChannelId::new(1026379809271595099);
+// roles pinged by `/chchest` depending on the reported content
+pub const CHCHEST_ROBOT_ROLE: RoleId = RoleId::new(1029621265675341894);
+pub const CHCHEST_KEY_ROLE: RoleId = RoleId::new(1068697249594478652);
+pub const CHCHEST_CUSTOM_ROLE: RoleId = RoleId::new(1038136231084691556);
