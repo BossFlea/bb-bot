@@ -1,5 +1,10 @@
 use poise::serenity_prelude::{CreateSelectMenuKind, CreateSelectMenuOption, InputTextStyle};
 
+use crate::chchest::types::{
+    CHEST_EMOJI, CONTROL_SWITCH, ELECTRON_TRANSMITTER_EMOJI, FTX_3070_EMOJI, JUNGLE_KEY_EMOJI,
+    ROBOTRON_REFLECTOR_EMOJI, SUPERLITE_MOTOR_EMOJI, SYNTHETIC_HEART_EMOJI,
+};
+
 use bb_bot_macros::define_modal;
 
 define_modal! {
@@ -10,14 +15,14 @@ define_modal! {
             select kind {
                 kind: CreateSelectMenuKind::String {
                     options: vec![
-                        CreateSelectMenuOption::new("Electron Transmitter", "electron_transmitter"),
-                        CreateSelectMenuOption::new("FTX 3070", "ftx_3070"),
-                        CreateSelectMenuOption::new("Robotron Reflector", "robotron_reflector"),
-                        CreateSelectMenuOption::new("Superlite Motor", "superlite_motor"),
-                        CreateSelectMenuOption::new("Control Switch", "control_switch"),
-                        CreateSelectMenuOption::new("Synthetic Heart", "synthetic_heart"),
-                        CreateSelectMenuOption::new("Key Guardian", "key_guardian"),
-                        CreateSelectMenuOption::new("CH Chest (custom loot)", "custom").description("Enter item(s) in the field below"),
+                        CreateSelectMenuOption::new("Electron Transmitter", "electron_transmitter").emoji(ELECTRON_TRANSMITTER_EMOJI),
+                        CreateSelectMenuOption::new("FTX 3070", "ftx_3070").emoji(FTX_3070_EMOJI),
+                        CreateSelectMenuOption::new("Robotron Reflector", "robotron_reflector").emoji(ROBOTRON_REFLECTOR_EMOJI),
+                        CreateSelectMenuOption::new("Superlite Motor", "superlite_motor").emoji(SUPERLITE_MOTOR_EMOJI),
+                        CreateSelectMenuOption::new("Control Switch", "control_switch").emoji(CONTROL_SWITCH),
+                        CreateSelectMenuOption::new("Synthetic Heart", "synthetic_heart").emoji(SYNTHETIC_HEART_EMOJI),
+                        CreateSelectMenuOption::new("Key Guardian", "key_guardian").emoji(JUNGLE_KEY_EMOJI),
+                        CreateSelectMenuOption::new("CH Chest (custom loot)", "custom").description("Enter item(s) in the field below").emoji(CHEST_EMOJI),
                     ]
                     .into(),
                 },

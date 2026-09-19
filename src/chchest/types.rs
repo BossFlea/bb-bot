@@ -3,7 +3,9 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::{Result, anyhow, bail};
-use poise::serenity_prelude::{Mentionable as _, RoleId, UserId};
+use poise::serenity_prelude::{
+    EmojiId, Mentionable as _, ReactionType, RoleId, UserId, small_fixed_array::FixedString,
+};
 use regex::Regex;
 
 use crate::config::{CHCHEST_CUSTOM_ROLE, CHCHEST_KEY_ROLE, CHCHEST_ROBOT_ROLE};
@@ -19,6 +21,64 @@ static COORDS_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?:x:)?\s*(?P<x>-?\d+),?\s*(?:y:)?\s*(?P<y>-?\d+),?\s*(?:z:)?\s*(?P<z>-?\d+)$")
         .expect("regex should compile")
 });
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EmojiIdentifier {
+    pub id: EmojiId,
+    pub name: &'static str,
+    pub animated: bool,
+}
+
+impl EmojiIdentifier {
+    pub const fn new(id: EmojiId, name: &'static str, animated: bool) -> Self {
+        Self { id, name, animated }
+    }
+}
+
+impl std::fmt::Display for EmojiIdentifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "<{}:{}:{}>",
+            if self.animated { "a" } else { "" },
+            self.name,
+            self.id,
+        )
+    }
+}
+
+impl From<EmojiIdentifier> for ReactionType {
+    fn from(emoji: EmojiIdentifier) -> Self {
+        ReactionType::Custom {
+            animated: emoji.animated,
+            id: emoji.id,
+            name: Some(FixedString::from_static_trunc(emoji.name)),
+        }
+    }
+}
+
+pub const ELECTRON_TRANSMITTER_EMOJI: EmojiIdentifier = EmojiIdentifier::new(
+    EmojiId::new(1079562875875622954),
+    "electron_transmitter",
+    false,
+);
+pub const FTX_3070_EMOJI: EmojiIdentifier =
+    EmojiIdentifier::new(EmojiId::new(1079562996591906866), "ftx_3000", false);
+pub const ROBOTRON_REFLECTOR_EMOJI: EmojiIdentifier = EmojiIdentifier::new(
+    EmojiId::new(1079562878287368242),
+    "robotron_reflector",
+    false,
+);
+pub const SUPERLITE_MOTOR_EMOJI: EmojiIdentifier =
+    EmojiIdentifier::new(EmojiId::new(1079562883635093564), "superlite_motor", false);
+pub const CONTROL_SWITCH: EmojiIdentifier =
+    EmojiIdentifier::new(EmojiId::new(1079562882158690386), "control_switch", false);
+pub const SYNTHETIC_HEART_EMOJI: EmojiIdentifier =
+    EmojiIdentifier::new(EmojiId::new(1079562880644554752), "synthetic_heart", false);
+pub const JUNGLE_KEY_EMOJI: EmojiIdentifier =
+    EmojiIdentifier::new(EmojiId::new(1079556570020597830), "jungle_key", false);
+pub const CHEST_EMOJI: EmojiIdentifier =
+    EmojiIdentifier::new(EmojiId::new(1134196505876643974), "chest", true);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ItemKind {
@@ -74,6 +134,19 @@ impl ItemKind {
             | Self::SyntheticHeart => CHCHEST_ROBOT_ROLE,
             Self::KeyGuardian => CHCHEST_KEY_ROLE,
             Self::Custom => CHCHEST_CUSTOM_ROLE,
+        }
+    }
+
+    pub fn emoji(self) -> EmojiIdentifier {
+        match self {
+            ItemKind::ElectronTransmitter => ELECTRON_TRANSMITTER_EMOJI,
+            ItemKind::Ftx3070 => FTX_3070_EMOJI,
+            ItemKind::RobotronReflector => ROBOTRON_REFLECTOR_EMOJI,
+            ItemKind::SuperliteMotor => SUPERLITE_MOTOR_EMOJI,
+            ItemKind::ControlSwitch => CONTROL_SWITCH,
+            ItemKind::SyntheticHeart => SYNTHETIC_HEART_EMOJI,
+            ItemKind::KeyGuardian => JUNGLE_KEY_EMOJI,
+            ItemKind::Custom => CHEST_EMOJI,
         }
     }
 }
@@ -152,11 +225,12 @@ pub fn announcement_text(
     let contact_display = contact.unwrap_or(DEFAULT_CONTACT);
 
     let mut text = format!(
-        "## {} found:  {item_display}
+        "## {} found:  {} {item_display}
 ### Coordinates: **`{coords}`**
 ### Instructions
 {contact_display}",
         reporter.mention(),
+        kind.emoji(),
     );
 
     if let Some(notes) = notes {

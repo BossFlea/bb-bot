@@ -9,7 +9,7 @@ use crate::shared::Context;
 #[poise::command(
     slash_command,
     manual_cooldowns = true,
-    required_bot_permissions = "VIEW_CHANNEL | SEND_MESSAGES"
+    required_bot_permissions = "VIEW_CHANNEL | SEND_MESSAGES | USE_EXTERNAL_EMOJIS"
 )]
 pub async fn chchest(ctx: Context<'_>) -> Result<()> {
     let Context::Application(app_ctx) = ctx else {
