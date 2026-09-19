@@ -8,8 +8,8 @@ use poise::{
 };
 use tracing::warn;
 
-use crate::error::UserError;
 use crate::shared::Context;
+use crate::{config::BOT_MAINTAINER, error::UserError};
 
 /// Register commands in a guild
 #[poise::command(
@@ -33,7 +33,7 @@ pub async fn register(ctx: Context<'_>) -> Result<()> {
         .await?
         .member_permissions(&author);
 
-    if !permissions.manage_guild() {
+    if !permissions.manage_guild() && author.user.id != BOT_MAINTAINER {
         warn!(
             "{} attempted to use the register command without permission",
             author.user.name
