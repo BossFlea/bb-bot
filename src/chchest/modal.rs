@@ -48,7 +48,7 @@ define_modal! {
             },
             input contact {
                 style: InputTextStyle::Short,
-                label: "Contact (optional)",
+                label: "Contact instructions (optional)",
                 description: "Defaults to sending username in thread",
                 placeholder: "e.g. /p <username>, /boop, send username in thread, ...",
                 max_length: 100,
