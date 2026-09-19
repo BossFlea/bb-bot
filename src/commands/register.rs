@@ -69,6 +69,7 @@ pub async fn register(ctx: Context<'_>) -> Result<()> {
         "## Registered successfully
 Successfully registered the following commands and their subcommands:\n{commands_list}
 Note: All commands are visible only to users with the `MANAGE_GUILD` permission by default. \
+The `/chchest` command is the only exception.
 **This is meant to be changed!** \
 Role-based, per-command permissions should be set up manually \
 in the server settings under `Integrations`.
