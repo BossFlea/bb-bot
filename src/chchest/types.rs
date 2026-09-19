@@ -58,25 +58,25 @@ impl From<EmojiIdentifier> for ReactionType {
 }
 
 pub const ELECTRON_TRANSMITTER_EMOJI: EmojiIdentifier = EmojiIdentifier::new(
-    EmojiId::new(1550662116200022076),
+    EmojiId::new(1550996755024191588),
     "electron_transmitter",
     false,
 );
 pub const FTX_3070_EMOJI: EmojiIdentifier =
-    EmojiIdentifier::new(EmojiId::new(1550662194125873304), "ftx_3070", false);
+    EmojiIdentifier::new(EmojiId::new(1550996795990212650), "ftx_3070", false);
 pub const ROBOTRON_REFLECTOR_EMOJI: EmojiIdentifier = EmojiIdentifier::new(
-    EmojiId::new(1550662242934988911),
+    EmojiId::new(1550996811244638329),
     "robotron_reflector",
     false,
 );
 pub const SUPERLITE_MOTOR_EMOJI: EmojiIdentifier =
-    EmojiIdentifier::new(EmojiId::new(1550662304138403982), "superlite_motor", false);
+    EmojiIdentifier::new(EmojiId::new(1550996840500039731), "superlite_motor", false);
 pub const CONTROL_SWITCH: EmojiIdentifier =
-    EmojiIdentifier::new(EmojiId::new(1550662342579200020), "control_switch", false);
+    EmojiIdentifier::new(EmojiId::new(1550996857889497180), "control_switch", false);
 pub const SYNTHETIC_HEART_EMOJI: EmojiIdentifier =
-    EmojiIdentifier::new(EmojiId::new(1550662400016126054), "synthetic_heart", false);
+    EmojiIdentifier::new(EmojiId::new(1550996873870049442), "synthetic_heart", false);
 pub const JUNGLE_KEY_EMOJI: EmojiIdentifier =
-    EmojiIdentifier::new(EmojiId::new(1550662486833762324), "jungle_key", false);
+    EmojiIdentifier::new(EmojiId::new(1550996886771597425), "jungle_key", false);
 pub const CHEST_EMOJI: EmojiIdentifier =
     EmojiIdentifier::new(EmojiId::new(1550662555176009831), "chest", true);
 
