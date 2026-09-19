@@ -282,8 +282,8 @@ pub fn announcement_text(
         format!("### Coordinates: **`{coords}`**")
     } else {
         let mut chests = String::from("### Coordinates:");
-        for coords in coords_list {
-            chests.push_str(&format!("\n- **`{coords}`**"));
+        for (index, coords) in coords_list.iter().enumerate() {
+            chests.push_str(&format!("\n{}. **`{coords}`**", index + 1));
         }
         chests
     };

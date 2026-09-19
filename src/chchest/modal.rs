@@ -42,8 +42,8 @@ define_modal! {
             input coords {
                 style: InputTextStyle::Paragraph,
                 label: "Coordinates",
-                description: "One location per line; Supports most common formats",
-                placeholder: "e.g. 123, 64, -456\n...\n(must be in the same lobby)",
+                description: "One location per line",
+                placeholder: "e.g. 123 64 -456\n...\n(supports most common formats)",
                 max_length: 200,
                 required: true,
             },

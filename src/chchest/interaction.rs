@@ -169,7 +169,7 @@ You're on cooldown. Please wait {} seconds before reporting again.",
 
     let ping_roles = ItemKind::ping_roles(&kinds);
     let footnote = format!(
-        "Find your own item? Run `/chchest` in {} to send it here!\n{}",
+        "Find your own item? Run **`/chchest`** in {} to send it here!\n{}",
         ChannelId::new(916556586980347904).mention(),
         ping_roles
             .iter()
