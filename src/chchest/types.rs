@@ -137,6 +137,17 @@ impl ItemKind {
         }
     }
 
+    pub fn ping_roles(kinds: &[Self]) -> Vec<RoleId> {
+        let mut roles = Vec::new();
+        for kind in kinds {
+            let role = kind.ping_role();
+            if !roles.contains(&role) {
+                roles.push(role);
+            }
+        }
+        roles
+    }
+
     pub fn emoji(self) -> EmojiIdentifier {
         match self {
             ItemKind::ElectronTransmitter => ELECTRON_TRANSMITTER_EMOJI,
@@ -157,6 +168,8 @@ pub struct Coords {
     pub y: i32,
     pub z: i32,
 }
+
+pub const MAX_CHESTS: usize = 5;
 
 impl Coords {
     pub fn parse(input: &str) -> Result<Self> {
@@ -199,6 +212,35 @@ impl Coords {
         }
         Ok(())
     }
+
+    pub fn parse_list(input: &str) -> Result<Vec<Self>> {
+        let lines: Vec<&str> = input
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        if lines.is_empty() {
+            bail!(UserError(anyhow!(
+                "Enter at least one chest coordinate (one per line)"
+            )));
+        }
+
+        if lines.len() > MAX_CHESTS {
+            bail!(UserError(anyhow!(
+                "Too many chests: at most {MAX_CHESTS} coordinates per report"
+            )));
+        }
+
+        lines
+            .into_iter()
+            .enumerate()
+            .map(|(index, line)| {
+                Self::parse(line)
+                    .map_err(|err| UserError(anyhow!("Chest {}: {err:#}", index + 1)).into())
+            })
+            .collect()
+    }
 }
 
 impl std::fmt::Display for Coords {
@@ -209,28 +251,49 @@ impl std::fmt::Display for Coords {
 
 pub const DEFAULT_CONTACT: &str = "Send your IGN in the thread below";
 
+pub fn item_name(kind: ItemKind, custom_item: Option<&str>) -> String {
+    match (kind.is_custom(), custom_item) {
+        (true, Some(item)) => item.to_string(),
+        _ => kind.display().to_string(),
+    }
+}
+
+fn item_entry(kind: ItemKind, custom_item: Option<&str>) -> String {
+    format!("{} {}", kind.emoji(), item_name(kind, custom_item))
+}
+
 pub fn announcement_text(
-    kind: ItemKind,
+    kinds: &[ItemKind],
     custom_item: Option<&str>,
-    coords: Coords,
+    coords_list: &[Coords],
     reporter: UserId,
     contact: Option<&str>,
     notes: Option<&str>,
 ) -> String {
-    let item_display = match (kind.is_custom(), custom_item) {
-        (true, Some(item)) => item.to_string(),
-        _ => kind.display().to_string(),
-    };
-
     let contact_display = contact.unwrap_or(DEFAULT_CONTACT);
 
+    let items = kinds
+        .iter()
+        .map(|kind| item_entry(*kind, custom_item))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let chests = if let [coords] = coords_list {
+        format!("### Coordinates: **`{coords}`**")
+    } else {
+        let mut chests = String::from("### Coordinates:");
+        for coords in coords_list {
+            chests.push_str(&format!("\n- **`{coords}`**"));
+        }
+        chests
+    };
+
     let mut text = format!(
-        "## {} found:  {} {item_display}
-### Coordinates: **`{coords}`**
+        "## {} found:  {items}
+{chests}
 ### Instructions
 {contact_display}",
         reporter.mention(),
-        kind.emoji(),
     );
 
     if let Some(notes) = notes {

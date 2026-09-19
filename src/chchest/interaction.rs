@@ -17,7 +17,10 @@ use crate::error::UserError;
 use crate::{
     chchest::{
         modal::ChChestReport,
-        types::{CHCHEST_COOLDOWN, Coords, ItemKind, announcement_text, mark_closed, thread_name},
+        types::{
+            CHCHEST_COOLDOWN, Coords, ItemKind, announcement_text, item_name, mark_closed,
+            thread_name,
+        },
     },
     shared::{
         BotData,
@@ -73,18 +76,32 @@ async fn modal(
 async fn submit(ctx: &SerenityContext, interaction: &ModalInteraction) -> Result<()> {
     let values = ChChestReport::validate(&interaction.data.components)?;
 
-    let kind = ItemKind::from_slug(values.kind.first().context("Expected selected option")?)?;
+    if values.kind.is_empty() {
+        bail!("Invalid modal data: Expected selected option");
+    }
+    let kinds = values
+        .kind
+        .iter()
+        .map(|slug| ItemKind::from_slug(slug))
+        .collect::<Result<Vec<_>>>()?;
 
     let custom_raw = values.custom_item.to_string();
     let custom_item = (!custom_raw.trim().is_empty()).then(|| custom_raw.trim().to_string());
 
-    if kind.is_custom() && custom_item.is_none() {
+    let has_custom = kinds.iter().any(|kind| kind.is_custom());
+    if has_custom && custom_item.is_none() {
         bail!(UserError(anyhow!(
-            "`Item found` is required when reporting a custom CH Chest"
+            "`Item found` field is required when reporting a custom CH Chest"
+        )));
+    }
+    if !has_custom && custom_item.is_some() {
+        bail!(UserError(anyhow!(
+            "You entered a custom item without selecting `CH Chest`: \
+            either select it or clear the `Item found` field"
         )));
     }
 
-    let coords = Coords::parse(values.coords.as_ref())?;
+    let coords_list = Coords::parse_list(values.coords.as_ref())?;
 
     let contact_raw = values.contact.to_string();
     let contact = (!contact_raw.trim().is_empty()).then(|| contact_raw.trim().to_string());
@@ -134,20 +151,31 @@ You're on cooldown. Please wait {} seconds before reporting again.",
     interaction.defer_ephemeral(ctx.http()).await?;
 
     let reporter = interaction.user.id;
-    let item_display = custom_item.as_deref().unwrap_or(kind.display());
+    let mut thread_item = kinds
+        .first()
+        .map(|kind| item_name(*kind, custom_item.as_deref()))
+        .unwrap_or_default();
+    if kinds.len() > 1 {
+        thread_item.push_str(&format!(" +{}", kinds.len() - 1));
+    }
     let body = announcement_text(
-        kind,
+        &kinds,
         custom_item.as_deref(),
-        coords,
+        &coords_list,
         reporter,
         contact.as_deref(),
         notes.as_deref(),
     );
 
+    let ping_roles = ItemKind::ping_roles(&kinds);
     let footnote = format!(
-        "Find your own part? Run `/chchest` in {} to send it here!\n{}",
+        "Find your own item? Run `/chchest` in {} to send it here!\n{}",
         ChannelId::new(916556586980347904).mention(),
-        kind.ping_role().mention()
+        ping_roles
+            .iter()
+            .map(|role| role.mention().to_string())
+            .collect::<Vec<_>>()
+            .join(" "),
     );
 
     let container = CreateComponent::Container(
@@ -162,7 +190,6 @@ You're on cooldown. Please wait {} seconds before reporting again.",
         .accent_color(BLUE),
     );
 
-    let ping_role = kind.ping_role();
     let message = CHCHEST_CHANNEL
         .send_message(
             ctx.http(),
@@ -170,7 +197,7 @@ You're on cooldown. Please wait {} seconds before reporting again.",
                 .flags(MessageFlags::IS_COMPONENTS_V2)
                 .allowed_mentions(
                     CreateAllowedMentions::new()
-                        .roles(&[ping_role])
+                        .roles(ping_roles.as_slice())
                         .users(&[reporter]),
                 )
                 .components(vec![container]),
@@ -181,7 +208,7 @@ You're on cooldown. Please wait {} seconds before reporting again.",
         .create_thread_from_message(
             ctx.http(),
             message.id,
-            CreateThread::new(thread_name(item_display, &interaction.user.name))
+            CreateThread::new(thread_name(&thread_item, &interaction.user.name))
                 .auto_archive_duration(AutoArchiveDuration::OneDay),
         )
         .await
