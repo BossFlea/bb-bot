@@ -27,6 +27,7 @@ define_modal! {
                     .into(),
                 },
                 label: "Chest content",
+                placeholder: "Select one or more",
                 min_values: 1,
                 max_values: 8,
                 required: true,
