@@ -5,7 +5,7 @@ use tracing_subscriber::{
 };
 
 pub fn init_log() -> WorkerGuard {
-    let file_appender = tracing_appender::rolling::daily("logs/", "bot.log");
+    let file_appender = tracing_appender::rolling::weekly("logs/", "bot.log");
     let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
 
     let crate_filter = filter::Targets::new().with_targets([("bb_bot", Level::DEBUG)]);
