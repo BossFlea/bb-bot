@@ -4,9 +4,9 @@ use anyhow::Result;
 use poise::{
     CreateReply,
     serenity_prelude::{
-        CreateAttachment, CreateComponent, CreateContainer, CreateContainerComponent,
-        CreateMessage, CreateTextDisplay, GenericChannelId, Mentionable as _, MessageFlags,
-        colours::css::POSITIVE,
+        Component, CreateAttachment, CreateComponent, CreateContainer, CreateContainerComponent,
+        CreateMessage, CreateTextDisplay, GenericChannelId, GetMessages, Http, Mentionable as _,
+        Message, MessageFlags, MessageId, UserId, colours::css::POSITIVE,
     },
 };
 use tokio::sync::{Mutex, Notify};
@@ -72,7 +72,7 @@ async fn manage(ctx: Context<'_>) -> Result<()> {
 /// Send the HoB list
 #[poise::command(
     slash_command,
-    required_bot_permissions = "VIEW_CHANNEL | SEND_MESSAGES | ATTACH_FILES"
+    required_bot_permissions = "VIEW_CHANNEL | SEND_MESSAGES | ATTACH_FILES | READ_MESSAGE_HISTORY"
 )]
 async fn send(
     ctx: Context<'_>,
@@ -82,9 +82,12 @@ async fn send(
     #[description = "Whether to suppress backup script generation"] suppress_backup_script: Option<
         bool,
     >,
+    #[description = "Whether to skip deletion of previously sent HoB messages in the target channel"]
+    skip_deletion: Option<bool>,
 ) -> Result<()> {
     let channel = channel.unwrap_or(ctx.channel_id());
     let suppress_backup_script = suppress_backup_script.unwrap_or(false);
+    let skip_deletion = skip_deletion.unwrap_or(false);
 
     let hob_entries = ctx.data().db_handle.request(GetAllHobEntries).await??;
 
@@ -99,23 +102,74 @@ async fn send(
 
     ctx.defer_ephemeral().await?;
 
+    let mut sent_message_ids = Vec::with_capacity(message_count);
     for message in messages {
-        channel.send_message(ctx.http(), message).await?;
+        sent_message_ids.push(channel.send_message(ctx.http(), message).await?.id);
     }
 
-    if !suppress_backup_script {
-        HOB_LOG_CHANNEL
-            .send_message(ctx.http(), log_message(&hob_entries)?)
-            .await?;
+    let deletion_feedback = if skip_deletion {
+        "Skipped deletion of previous HoB messages.".to_string()
+    } else if let Some(oldest_sent_message_id) = sent_message_ids.first() {
+        match delete_previous_hob_messages(
+            ctx.http(),
+            channel,
+            ctx.framework().bot_id(),
+            *oldest_sent_message_id,
+        )
+        .await
+        {
+            Ok(deleted_count) => {
+                tracing::info!(
+                    "Deleted {deleted_count} previous HoB message(s) in channel {}",
+                    channel.get()
+                );
+                format!("Deleted {deleted_count} previous HoB message(s).")
+            }
+            Err(error) => {
+                tracing::warn!("Failed to delete previous HoB messages: {error:#}");
+                "Failed to delete previous HoB messages!".to_string()
+            }
+        }
+    } else {
+        "No previous HoB messages were deleted.".to_string()
+    };
+
+    let backup_feedback = if suppress_backup_script {
+        None
+    } else {
+        match log_message(&hob_entries) {
+            Ok(message) => match HOB_LOG_CHANNEL.send_message(ctx.http(), message).await {
+                Ok(_) => Some(format!(
+                    "Backup script sent to {}.",
+                    HOB_LOG_CHANNEL.mention()
+                )),
+                Err(error) => {
+                    tracing::warn!("Failed to send HoB backup script: {error:#}");
+                    Some("Failed to send the backup script!".to_string())
+                }
+            },
+            Err(error) => {
+                tracing::warn!("Failed to build HoB backup script message: {error:#}");
+                Some("Failed to send the backup script!".to_string())
+            }
+        }
+    };
+
+    let mut response_lines = vec![
+        "## Sent Successfully".to_string(),
+        format!(
+            "The full HoB was sent to {} in the form of {message_count} messages.\n",
+            channel.mention()
+        ),
+        deletion_feedback,
+    ];
+    if let Some(backup_feedback) = backup_feedback {
+        response_lines.push(backup_feedback);
     }
 
     let container = CreateComponent::Container(
         CreateContainer::new(vec![CreateContainerComponent::TextDisplay(
-            CreateTextDisplay::new(format!(
-                "## Sent Successfully
-The full HoB was sent to {} in the form of {message_count} messages.",
-                channel.mention()
-            )),
+            CreateTextDisplay::new(response_lines.join("\n")),
         )])
         .accent_color(POSITIVE),
     );
@@ -129,6 +183,69 @@ The full HoB was sent to {} in the form of {message_count} messages.",
     .await?;
 
     Ok(())
+}
+
+const MAX_HOB_BATCH_SPREAD_MILLIS: u64 = 60_000;
+
+async fn delete_previous_hob_messages(
+    http: &Http,
+    channel: GenericChannelId,
+    bot_id: UserId,
+    before: MessageId,
+) -> Result<usize> {
+    let messages = channel
+        .messages(http, GetMessages::new().before(before).limit(32))
+        .await?;
+
+    let Some(previous_message_ids) = previous_hob_batch_ids(&messages, bot_id) else {
+        return Ok(0);
+    };
+
+    let deleted_count = previous_message_ids.len();
+    for message_id in previous_message_ids {
+        channel
+            .delete_message(http, message_id, Some("Cleanup of previous HoB messages"))
+            .await?;
+    }
+
+    Ok(deleted_count)
+}
+
+fn previous_hob_batch_ids(messages: &[Message], bot_id: UserId) -> Option<Vec<MessageId>> {
+    let newest = messages.first()?;
+    if !is_bot_hob_message(newest, bot_id) {
+        return None;
+    }
+
+    let newest_timestamp = newest.timestamp.unix_timestamp_millis();
+    let mut message_ids = Vec::new();
+
+    for message in messages {
+        if !is_bot_hob_message(message, bot_id)
+            || message
+                .timestamp
+                .unix_timestamp_millis()
+                .abs_diff(newest_timestamp)
+                > MAX_HOB_BATCH_SPREAD_MILLIS
+        {
+            break;
+        }
+
+        message_ids.push(message.id);
+    }
+
+    Some(message_ids)
+}
+
+fn is_bot_hob_message(message: &Message, bot_id: UserId) -> bool {
+    message.author.id == bot_id
+        && message
+            .flags
+            .is_some_and(|flags| flags.contains(MessageFlags::IS_COMPONENTS_V2))
+        && message
+            .components
+            .iter()
+            .any(|component| matches!(component, Component::Container(_)))
 }
 
 fn log_message(hob_entries: &[HobEntry]) -> Result<CreateMessage<'static>> {
